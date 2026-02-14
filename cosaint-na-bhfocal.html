@@ -1,0 +1,624 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Irish Gender Invaders — Co. Mayo (m/f)</title>
+  <style>
+    :root { color-scheme: dark; }
+    body{
+      margin:0;
+      background:#0b0f16;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      display:grid;
+      place-items:center;
+      min-height:100vh;
+      padding:16px;
+    }
+    .wrap{ width:min(980px,100%); }
+    .hud{
+      display:flex; gap:12px; flex-wrap:wrap;
+      align-items:center; justify-content:space-between;
+      margin-bottom:10px; color:#d7e2ff; font-size:14px;
+    }
+    .hud .left{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+    .pill{
+      background:rgba(255,255,255,0.08);
+      border:1px solid rgba(255,255,255,0.12);
+      padding:6px 10px;
+      border-radius:999px;
+      white-space:nowrap;
+    }
+    .kbd{
+      font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      background:rgba(255,255,255,0.10);
+      border:1px solid rgba(255,255,255,0.18);
+      padding:2px 6px;
+      border-radius:6px;
+    }
+    canvas{
+      width:100%;
+      height:auto;
+      background:
+        radial-gradient(1200px 600px at 50% 100%, rgba(120,160,255,0.12), transparent 55%),
+        linear-gradient(#070a10, #0b0f16);
+      border:1px solid rgba(255,255,255,0.14);
+      border-radius:14px;
+      box-shadow:0 10px 40px rgba(0,0,0,0.55);
+      touch-action:pan-x;
+    }
+    .panel{
+      margin-top:10px;
+      color:#c9d6ff;
+      font-size:13px;
+      line-height:1.35;
+      background:rgba(255,255,255,0.06);
+      border:1px solid rgba(255,255,255,0.10);
+      border-radius:12px;
+      padding:10px 12px;
+    }
+    .panel details{ margin-top:8px; }
+    .panel summary{ cursor:pointer; }
+    .small{ opacity:0.92; }
+    code{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:12px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hud">
+      <div class="left">
+        <div class="pill">Score: <b id="score">0</b></div>
+        <div class="pill">Streak: <b id="streak">0</b></div>
+        <div class="pill">Lives: <b id="lives">3</b></div>
+        <div class="pill">Level: <b id="level">1</b></div>
+        <div class="pill">Mode: <b id="mode">Practice</b></div>
+      </div>
+      <div class="pill">
+        Shoot: <span class="kbd">M</span> masculine · <span class="kbd">F</span> feminine ·
+        Pause: <span class="kbd">P</span> · Restart: <span class="kbd">R</span> · Toggle hints: <span class="kbd">H</span>
+      </div>
+    </div>
+
+    <canvas id="game" width="960" height="520"></canvas>
+
+    <div class="panel">
+      <div class="small">
+        Co. Mayo-themed nouns fall from the sky. Press <span class="kbd">M</span> or <span class="kbd">F</span> to fire the matching shot.
+        Correct = points + streak bonus. Wrong = score penalty + lose a life. If a noun reaches the ground, you lose a life.
+        Toggle hint phrases with <span class="kbd">H</span>.
+      </div>
+      <details>
+        <summary><b>Edit / add nouns (m/f)</b></summary>
+        <div class="small">
+          Find <code>const NOUNS = [...]</code> and add items like
+          <code>{ w: "cladach", g: "m" }</code> or <code>{ w: "farraige", g: "f" }</code>.
+          Gender key: <code>g: "m"</code> or <code>g: "f"</code>.
+        </div>
+      </details>
+      <details>
+        <summary><b>Note on hints</b></summary>
+        <div class="small">
+          Hint phrases use a teaching heuristic: adjective after a <i>feminine</i> noun often lenites (e.g., <i>sráid mhór</i>)
+          while after a <i>masculine</i> noun it often doesn’t (e.g., <i>teach mór</i>). Irish has additional conditions;
+          use this as reinforcement, not a complete grammar engine.
+        </div>
+      </details>
+    </div>
+  </div>
+
+<script>
+(() => {
+  "use strict";
+
+  // ============================================================
+  //  Co. Mayo-themed Irish nouns (coast + countryside + community)
+  //  Tailor freely to your dialect/teaching set.
+  // ============================================================
+  const NOUNS = [
+    // -------------------- Coastal life --------------------
+    { w: "bád", g: "m" },        // boat
+    { w: "iasc", g: "m" },       // fish
+    { w: "cladach", g: "m" },    // shore
+    { w: "calafort", g: "m" },   // harbour
+    { w: "tonn", g: "f" },       // wave
+    { w: "taoide", g: "f" },     // tide
+    { w: "farraige", g: "f" },   // sea
+    { w: "trá", g: "f" },        // beach
+    { w: "gaoth", g: "f" },      // wind
+    { w: "báisteach", g: "f" },  // rain
+    { w: "oíche", g: "f" },      // night
+
+    // -------------------- Countryside --------------------
+    { w: "cnoc", g: "m" },       // hill
+    { w: "páirc", g: "f" },      // field
+    { w: "móin", g: "f" },       // turf/peat
+    { w: "bó", g: "f" },         // cow
+    { w: "capall", g: "m" },     // horse
+    { w: "caora", g: "f" },      // sheep
+    { w: "crann", g: "m" },      // tree
+    { w: "loch", g: "m" },       // lake
+    { w: "abhainn", g: "f" },    // river
+    { w: "droichead", g: "m" },  // bridge
+    { w: "bóthar", g: "m" },     // road
+    { w: "slí", g: "f" },        // way/path (often fem)
+
+    // -------------------- Home / community --------------------
+    { w: "teach", g: "m" },      // house
+    { w: "doras", g: "m" },      // door
+    { w: "fuinneog", g: "f" },   // window
+    { w: "sráid", g: "f" },      // street
+    { w: "siopa", g: "m" },      // shop
+    { w: "scoil", g: "f" },      // school
+    { w: "séipéal", g: "m" },    // church
+    { w: "cluiche", g: "m" },    // game/match (commonly masc in many lists)
+    { w: "ceol", g: "m" },       // music
+    { w: "obair", g: "f" },      // work
+    { w: "ceist", g: "f" },      // question
+    { w: "páiste", g: "m" },     // child
+    { w: "bean", g: "f" },       // woman
+    { w: "fear", g: "m" },       // man
+    { w: "cathair", g: "f" },    // city/town (context)
+    { w: "baile", g: "m" },      // town
+  ];
+
+  // ---------- Canvas ----------
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d", { alpha: false });
+
+  function fitCanvas() {
+    const cssW = canvas.clientWidth;
+    const ratio = window.devicePixelRatio || 1;
+    canvas.width  = Math.round(cssW * ratio);
+    canvas.height = Math.round((cssW * (520/960)) * ratio);
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0); // draw in CSS pixels
+  }
+
+  function W(){ return canvas.clientWidth; }
+  function H(){ return canvas.clientHeight; }
+
+  requestAnimationFrame(() => fitCanvas());
+  window.addEventListener("resize", () => fitCanvas());
+
+  // ---------- HUD ----------
+  const scoreEl  = document.getElementById("score");
+  const streakEl = document.getElementById("streak");
+  const livesEl  = document.getElementById("lives");
+  const levelEl  = document.getElementById("level");
+  const modeEl   = document.getElementById("mode");
+
+  // ---------- Game state ----------
+  const state = {
+    over: false,
+    paused: false,
+    score: 0,
+    streak: 0,
+    lives: 3,
+    level: 1,
+    time: 0,
+    nextSpawn: 0,
+    invaders: [],
+    shots: [],
+    message: { text: "", until: 0 },
+    showHints: true
+  };
+
+  const player = { x: 0, y: 0, w: 98, h: 18 };
+
+  function updateHUD(){
+    scoreEl.textContent  = String(state.score);
+    streakEl.textContent = String(state.streak);
+    livesEl.textContent  = String(state.lives);
+    levelEl.textContent  = String(state.level);
+    modeEl.textContent   = state.showHints ? "Practice" : "Test";
+  }
+
+  function positionPlayer(){
+    player.x = W()/2 - player.w/2;
+    player.y = H() - 42;
+  }
+
+  // ---------- Difficulty knobs ----------
+  function spawnInterval(level){
+    return Math.max(0.55, 1.35 - level*0.10);
+  }
+  function invaderSpeed(level){
+    return 32 + level*6;
+  }
+  function shotSpeed(){
+    return 520;
+  }
+
+  // ---------- Helpers ----------
+  function randChoice(arr){
+    return arr[Math.floor(Math.random() * arr.length)];
+  }
+
+  function showMessage(text, seconds=1.2){
+    state.message.text = text;
+    state.message.until = state.time + seconds;
+  }
+
+  function resetGame(){
+    state.over = false;
+    state.paused = false;
+    state.score = 0;
+    state.streak = 0;
+    state.lives = 3;
+    state.level = 1;
+    state.time = 0;
+    state.nextSpawn = 0.7;
+    state.invaders.length = 0;
+    state.shots.length = 0;
+    state.message = { text: "Press M (masc) / F (fem). Toggle hints: H", until: 2.6 };
+    updateHUD();
+    positionPlayer();
+  }
+
+  // ============================================================
+  //  Hint engine (simplified)
+  // ============================================================
+  function lenite(word){
+    // Simplified: insert 'h' after initial b,c,d,f,g,m,p,s,t
+    // Not a complete orthography engine (e.g., s + consonant clusters).
+    if (!word) return word;
+    const first = word[0].toLowerCase();
+    const lenitable = new Set(["b","c","d","f","g","m","p","s","t"]);
+    if (word.length >= 2 && word[1].toLowerCase() === "h") return word;
+    if (lenitable.has(first)) return word[0] + "h" + word.slice(1);
+    return word;
+  }
+
+  function adjectiveAfterNoun(adj, nounGender){
+    // Heuristic: feminine noun -> adjective often lenites (mór -> mhór, beag -> bheag, etc.)
+    // Treat as reinforcement pattern, not full grammar.
+    return nounGender === "f" ? lenite(adj) : adj;
+  }
+
+  const ADJECTIVES = ["mór","beag","fuar","fliuch","garbh","ciúin"];
+
+  function examplePhrase(noun, gender){
+    const adj = randChoice(ADJECTIVES);
+    return `${noun} ${adjectiveAfterNoun(adj, gender)}`;
+  }
+
+  // ---------- Entities ----------
+  function spawnInvader(){
+    const item = randChoice(NOUNS);
+    const padding = 14;
+    const x = padding + Math.random() * (W() - padding*2);
+    state.invaders.push({
+      word: item.w,
+      g: item.g,
+      x,
+      y: -24,
+      vy: invaderSpeed(state.level),
+      r: 16,
+      hit: false
+    });
+  }
+
+  function fireShot(gender){
+    if (state.over || state.paused) return;
+    state.shots.push({
+      g: gender,
+      x: player.x + player.w/2,
+      y: player.y,
+      vy: -shotSpeed(),
+      r: 6
+    });
+  }
+
+  // ---------- Input ----------
+  window.addEventListener("keydown", (e) => {
+    const k = e.key.toLowerCase();
+
+    if (k === "p") state.paused = !state.paused;
+    if (k === "r") resetGame();
+    if (k === "h") { state.showHints = !state.showHints; updateHUD(); }
+
+    if (k === "m") fireShot("m");
+    if (k === "f") fireShot("f");
+  });
+
+  // Move ship with mouse/touch (optional)
+  function pointerMove(clientX){
+    const rect = canvas.getBoundingClientRect();
+    const x = clientX - rect.left;
+    player.x = Math.max(10, Math.min(W()-10-player.w, x - player.w/2));
+  }
+  canvas.addEventListener("mousemove", (e) => pointerMove(e.clientX));
+  canvas.addEventListener("touchmove", (e) => {
+    if (e.touches && e.touches[0]) pointerMove(e.touches[0].clientX);
+  }, { passive: true });
+
+  // ---------- Collision ----------
+  function dist2(ax, ay, bx, by){
+    const dx = ax - bx, dy = ay - by;
+    return dx*dx + dy*dy;
+  }
+
+  function handleHit(inv, shot){
+    inv.hit = true;
+    const correct = (inv.g === shot.g);
+
+    if (correct){
+      state.streak += 1;
+      const base = 10;
+      const bonus = Math.min(30, state.streak);
+      state.score += base + bonus;
+
+      const gTxt = inv.g === "m" ? "masc" : "fem";
+      if (state.showHints){
+        showMessage(`✓ ${inv.word} (${gTxt}) — e.g. “${examplePhrase(inv.word, inv.g)}”`, 1.35);
+      } else {
+        showMessage(`✓ ${inv.word} (${gTxt})`, 1.0);
+      }
+    } else {
+      state.streak = 0;
+      state.score = Math.max(0, state.score - 12);
+      state.lives -= 1;
+
+      const gTxt = inv.g === "m" ? "masc" : "fem";
+      if (state.showHints){
+        showMessage(`✗ ${inv.word} is ${gTxt} — e.g. “${examplePhrase(inv.word, inv.g)}”`, 1.55);
+      } else {
+        showMessage(`✗ ${inv.word} is ${gTxt}`, 1.25);
+      }
+    }
+
+    // Level up pacing
+    const newLevel = 1 + Math.floor(state.score / 160);
+    if (newLevel !== state.level){
+      state.level = newLevel;
+      showMessage(`Level ${state.level}!`, 1.0);
+    }
+
+    if (state.lives <= 0){
+      state.over = true;
+      showMessage("Game Over — press R to restart", 999);
+    }
+
+    updateHUD();
+  }
+
+  // ---------- Drawing ----------
+  function drawStarfield(){
+    ctx.save();
+    ctx.globalAlpha = 0.65;
+    for (let i=0; i<90; i++){
+      const x = (i*97) % W();
+      const y = ((i*223) % H());
+      const s = (i % 3) + 1;
+      ctx.fillStyle = "rgba(255,255,255,0.18)";
+      ctx.fillRect(x, y, s, s);
+    }
+    ctx.restore();
+  }
+
+  function roundRect(c, x, y, w, h, r){
+    c.beginPath();
+    c.moveTo(x+r, y);
+    c.arcTo(x+w, y, x+w, y+h, r);
+    c.arcTo(x+w, y+h, x, y+h, r);
+    c.arcTo(x, y+h, x, y, r);
+    c.arcTo(x, y, x+w, y, r);
+    c.closePath();
+  }
+
+  function drawGround(){
+    ctx.save();
+    ctx.strokeStyle = "rgba(255,255,255,0.18)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, H()-18);
+    ctx.lineTo(W(), H()-18);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawPlayer(){
+    ctx.save();
+    ctx.translate(player.x, player.y);
+
+    // base
+    ctx.fillStyle = "rgba(255,255,255,0.16)";
+    ctx.fillRect(0, 0, player.w, player.h);
+
+    // cannons
+    const pad = 10;
+    const cannonW = (player.w - pad*3)/2;
+    const cannonH = 12;
+
+    ctx.fillStyle = "rgba(130,190,255,0.35)";
+    ctx.fillRect(pad, -cannonH, cannonW, cannonH);
+
+    ctx.fillStyle = "rgba(255,150,220,0.30)";
+    ctx.fillRect(pad*2 + cannonW, -cannonH, cannonW, cannonH);
+
+    ctx.font = "12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    ctx.fillStyle = "rgba(210,235,255,0.95)";
+    ctx.fillText("M", pad + cannonW/2, -cannonH/2);
+
+    ctx.fillStyle = "rgba(255,220,245,0.95)";
+    ctx.fillText("F", pad*2 + cannonW + cannonW/2, -cannonH/2);
+
+    ctx.restore();
+  }
+
+  function drawInvader(inv){
+    ctx.save();
+    ctx.translate(inv.x, inv.y);
+
+    // bubble
+    ctx.beginPath();
+    ctx.arc(0, 0, inv.r + 10, 0, Math.PI*2);
+    ctx.fillStyle = inv.g === "m" ? "rgba(130,190,255,0.14)" : "rgba(255,150,220,0.12)";
+    ctx.fill();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = inv.g === "m" ? "rgba(130,190,255,0.35)" : "rgba(255,150,220,0.32)";
+    ctx.stroke();
+
+    // word
+    ctx.font = "16px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "rgba(245,248,255,0.95)";
+    ctx.fillText(inv.word, 0, 0);
+
+    // tiny gender marker (practice mode only)
+    if (state.showHints){
+      ctx.font = "11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+      ctx.fillStyle = "rgba(245,248,255,0.55)";
+      ctx.fillText(inv.g.toUpperCase(), 0, 22);
+    }
+
+    ctx.restore();
+  }
+
+  function drawShot(s){
+    ctx.save();
+    ctx.translate(s.x, s.y);
+    ctx.beginPath();
+    ctx.arc(0, 0, s.r, 0, Math.PI*2);
+    ctx.fillStyle = s.g === "m" ? "rgba(130,190,255,0.9)" : "rgba(255,150,220,0.9)";
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawMessage(){
+    if (!state.message.text || state.time > state.message.until) return;
+
+    const text = state.message.text;
+    ctx.save();
+    ctx.font = "16px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    const x = W()/2;
+    const y = 34;
+
+    const metrics = ctx.measureText(text);
+    const padX = 14, padY = 9;
+    const boxW = metrics.width + padX*2;
+    const boxH = 24 + padY*2;
+
+    ctx.fillStyle = "rgba(0,0,0,0.45)";
+    ctx.strokeStyle = "rgba(255,255,255,0.18)";
+    roundRect(ctx, x - boxW/2, y - boxH/2, boxW, boxH, 10);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = "rgba(235,245,255,0.95)";
+    ctx.fillText(text, x, y);
+    ctx.restore();
+  }
+
+  // ---------- Main loop ----------
+  let last = performance.now();
+
+  function tick(now){
+    const dt = Math.min(0.033, (now - last)/1000);
+    last = now;
+
+    // Keep player placed if canvas size changes
+    if (player.y === 0) positionPlayer();
+    else player.y = H() - 42;
+
+    if (!state.over && !state.paused){
+      state.time += dt;
+
+      if (state.time >= state.nextSpawn){
+        spawnInvader();
+        state.nextSpawn = state.time + spawnInterval(state.level) * (0.85 + Math.random()*0.35);
+      }
+
+      // Move invaders
+      for (const inv of state.invaders) inv.y += inv.vy * dt;
+
+      // Move shots
+      for (const s of state.shots) s.y += s.vy * dt;
+
+      // Collisions
+      for (const inv of state.invaders){
+        if (inv.hit) continue;
+        for (const s of state.shots){
+          if (s.y < -30) continue;
+          const rr = (inv.r + 10 + s.r);
+          if (dist2(inv.x, inv.y, s.x, s.y) <= rr*rr){
+            s.y = -9999; // consume shot
+            handleHit(inv, s);
+            break;
+          }
+        }
+      }
+
+      // Invaders reaching ground
+      for (const inv of state.invaders){
+        if (inv.hit) continue;
+        if (inv.y >= H() - 22){
+          inv.hit = true;
+          state.streak = 0;
+          state.lives -= 1;
+          showMessage(`Missed: ${inv.word}`, 1.0);
+
+          if (state.lives <= 0){
+            state.over = true;
+            showMessage("Game Over — press R to restart", 999);
+          }
+          updateHUD();
+        }
+      }
+
+      // Cleanup
+      state.invaders = state.invaders.filter(inv => inv.y < H() + 60 && !inv.hit);
+      state.shots = state.shots.filter(s => s.y > -60 && s.y < H() + 60);
+    }
+
+    // Draw
+    ctx.clearRect(0, 0, W(), H());
+    drawStarfield();
+    drawGround();
+
+    for (const inv of state.invaders) drawInvader(inv);
+    for (const s of state.shots) drawShot(s);
+    drawPlayer();
+
+    if (state.paused && !state.over){
+      ctx.save();
+      ctx.fillStyle = "rgba(0,0,0,0.35)";
+      ctx.fillRect(0, 0, W(), H());
+      ctx.font = "22px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
+      ctx.fillStyle = "rgba(245,248,255,0.95)";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("Paused (press P)", W()/2, H()/2);
+      ctx.restore();
+    }
+
+    if (state.over){
+      ctx.save();
+      ctx.fillStyle = "rgba(0,0,0,0.45)";
+      ctx.fillRect(0, 0, W(), H());
+      ctx.font = "28px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
+      ctx.fillStyle = "rgba(245,248,255,0.95)";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("Game Over", W()/2, H()/2 - 18);
+      ctx.font = "16px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
+      ctx.fillText("Press R to restart", W()/2, H()/2 + 18);
+      ctx.restore();
+    }
+
+    drawMessage();
+    requestAnimationFrame(tick);
+  }
+
+  resetGame();
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>
