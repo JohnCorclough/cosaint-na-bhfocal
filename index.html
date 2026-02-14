@@ -86,7 +86,6 @@
       font-size:12px;
     }
 
-    /* On desktop, keep buttons but make them smaller */
     @media (min-width: 860px){
       .controls{ grid-template-columns: 1fr 1fr 1fr 1fr; }
       .btnRow{ grid-template-columns: 1fr 1fr 1fr; }
@@ -112,7 +111,6 @@
 
     <canvas id="game" width="960" height="520" aria-label="Cosaint na bhFocal game canvas"></canvas>
 
-    <!-- Touch controls (works on phones + tablets) -->
     <div class="controls" aria-label="Touch controls">
       <div class="btn m" id="btnM">Masculine (M)</div>
       <div class="btn f" id="btnF">Feminine (F)</div>
@@ -145,56 +143,27 @@
 (() => {
   "use strict";
 
-  // ============================================================
-  //  Co. Mayo-themed Irish nouns (coast + countryside + community)
-  // ============================================================
   const NOUNS = [
     // Coastal life
-    { w: "bád", g: "m" },        // boat
-    { w: "iasc", g: "m" },       // fish
-    { w: "cladach", g: "m" },    // shore
-    { w: "calafort", g: "m" },   // harbour
-    { w: "tonn", g: "f" },       // wave
-    { w: "taoide", g: "f" },     // tide
-    { w: "farraige", g: "f" },   // sea
-    { w: "trá", g: "f" },        // beach
-    { w: "gaoth", g: "f" },      // wind
-    { w: "báisteach", g: "f" },  // rain
-    { w: "oíche", g: "f" },      // night
+    { w: "bád", g: "m" },        { w: "iasc", g: "m" },       { w: "cladach", g: "m" },
+    { w: "calafort", g: "m" },   { w: "tonn", g: "f" },       { w: "taoide", g: "f" },
+    { w: "farraige", g: "f" },   { w: "trá", g: "f" },        { w: "gaoth", g: "f" },
+    { w: "báisteach", g: "f" },  { w: "oíche", g: "f" },
 
     // Countryside
-    { w: "cnoc", g: "m" },       // hill
-    { w: "páirc", g: "f" },      // field
-    { w: "móin", g: "f" },       // turf/peat
-    { w: "bó", g: "f" },         // cow
-    { w: "capall", g: "m" },     // horse
-    { w: "caora", g: "f" },      // sheep
-    { w: "crann", g: "m" },      // tree
-    { w: "loch", g: "m" },       // lake
-    { w: "abhainn", g: "f" },    // river
-    { w: "droichead", g: "m" },  // bridge
-    { w: "bóthar", g: "m" },     // road
-    { w: "slí", g: "f" },        // way/path
+    { w: "cnoc", g: "m" },       { w: "páirc", g: "f" },      { w: "móin", g: "f" },
+    { w: "bó", g: "f" },         { w: "capall", g: "m" },     { w: "caora", g: "f" },
+    { w: "crann", g: "m" },      { w: "loch", g: "m" },       { w: "abhainn", g: "f" },
+    { w: "droichead", g: "m" },  { w: "bóthar", g: "m" },     { w: "slí", g: "f" },
 
     // Home/community
-    { w: "teach", g: "m" },      // house
-    { w: "doras", g: "m" },      // door
-    { w: "fuinneog", g: "f" },   // window
-    { w: "sráid", g: "f" },      // street
-    { w: "siopa", g: "m" },      // shop
-    { w: "scoil", g: "f" },      // school
-    { w: "séipéal", g: "m" },    // church
-    { w: "cluiche", g: "m" },    // game/match
-    { w: "ceol", g: "m" },       // music
-    { w: "obair", g: "f" },      // work
-    { w: "ceist", g: "f" },      // question
-    { w: "páiste", g: "m" },     // child
-    { w: "bean", g: "f" },       // woman
-    { w: "fear", g: "m" },       // man
-    { w: "baile", g: "m" },      // town
+    { w: "teach", g: "m" },      { w: "doras", g: "m" },      { w: "fuinneog", g: "f" },
+    { w: "sráid", g: "f" },      { w: "siopa", g: "m" },      { w: "scoil", g: "f" },
+    { w: "séipéal", g: "m" },    { w: "cluiche", g: "m" },    { w: "ceol", g: "m" },
+    { w: "obair", g: "f" },      { w: "ceist", g: "f" },      { w: "páiste", g: "m" },
+    { w: "bean", g: "f" },       { w: "fear", g: "m" },       { w: "baile", g: "m" },
   ];
 
-  // ---------- Canvas ----------
   const canvas = document.getElementById("game");
   const ctx = canvas.getContext("2d", { alpha: false });
 
@@ -203,7 +172,7 @@
     const ratio = window.devicePixelRatio || 1;
     canvas.width  = Math.round(cssW * ratio);
     canvas.height = Math.round((cssW * (520/960)) * ratio);
-    ctx.setTransform(ratio, 0, 0, ratio, 0, 0); // draw in CSS pixels
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
   }
   function W(){ return canvas.clientWidth; }
   function H(){ return canvas.clientHeight; }
@@ -211,14 +180,12 @@
   requestAnimationFrame(() => fitCanvas());
   window.addEventListener("resize", () => fitCanvas());
 
-  // ---------- HUD ----------
   const scoreEl  = document.getElementById("score");
   const streakEl = document.getElementById("streak");
   const livesEl  = document.getElementById("lives");
   const levelEl  = document.getElementById("level");
   const modeEl   = document.getElementById("mode");
 
-  // ---------- Game state ----------
   const state = {
     over: false,
     paused: false,
@@ -232,8 +199,6 @@
     shots: [],
     message: { text: "", until: 0 },
     showHints: true,
-
-    // gentle drift to animate background waves
     seaPhase: 0
   };
 
@@ -252,17 +217,30 @@
     player.y = H() - 46;
   }
 
-  // ---------- Difficulty knobs ----------
-  function spawnInterval(level){ return Math.max(0.55, 1.35 - level*0.10); }
-  function invaderSpeed(level){ return 32 + level*6; }
+  // ====== SPEED TUNING ======
+  // Requested: ~1/3 falling speed.
+  const FALL_SPEED_MULTIPLIER = 0.33;
+
+  function spawnInterval(level){
+    // Keep spawn rate roughly the same; only slow the descent.
+    return Math.max(0.55, 1.35 - level*0.10);
+  }
+
+  function invaderSpeed(level){
+    // Base speed scaled down to ~1/3.
+    const base = 32 + level*6;
+    return base * FALL_SPEED_MULTIPLIER;
+  }
+
   function shotSpeed(){ return 540; }
 
-  // ---------- Helpers ----------
   function randChoice(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+
   function showMessage(text, seconds=1.2){
     state.message.text = text;
     state.message.until = state.time + seconds;
   }
+
   function resetGame(){
     state.over = false;
     state.paused = false;
@@ -279,9 +257,7 @@
     positionPlayer();
   }
 
-  // ============================================================
-  //  Hint engine (simplified)
-  // ============================================================
+  // ===== Hint engine (simplified) =====
   function lenite(word){
     if (!word) return word;
     const first = word[0].toLowerCase();
@@ -299,7 +275,6 @@
     return `${noun} ${adjectiveAfterNoun(adj, gender)}`;
   }
 
-  // ---------- Entities ----------
   function spawnInvader(){
     const item = randChoice(NOUNS);
     const padding = 14;
@@ -314,6 +289,7 @@
       hit: false
     });
   }
+
   function fireShot(gender){
     if (state.over || state.paused) return;
     state.shots.push({
@@ -325,7 +301,7 @@
     });
   }
 
-  // ---------- Input: keyboard ----------
+  // Keyboard
   window.addEventListener("keydown", (e) => {
     const k = e.key.toLowerCase();
     if (k === "p") state.paused = !state.paused;
@@ -335,10 +311,9 @@
     if (k === "f") fireShot("f");
   });
 
-  // ---------- Input: touch buttons ----------
+  // Touch buttons
   function bindTap(el, fn){
-    const handler = (ev) => { ev.preventDefault(); fn(); };
-    el.addEventListener("pointerdown", handler);
+    el.addEventListener("pointerdown", (ev) => { ev.preventDefault(); fn(); });
   }
   bindTap(document.getElementById("btnM"), () => fireShot("m"));
   bindTap(document.getElementById("btnF"), () => fireShot("f"));
@@ -346,7 +321,7 @@
   bindTap(document.getElementById("btnR"), () => resetGame());
   bindTap(document.getElementById("btnH"), () => { state.showHints = !state.showHints; updateHUD(); });
 
-  // Optional move buttons (hold to move)
+  // Hold-to-move
   let moveLeftHeld = false, moveRightHeld = false;
   const btnLeft = document.getElementById("btnLeft");
   const btnRight = document.getElementById("btnRight");
@@ -360,7 +335,7 @@
   bindHold(btnLeft,  (v)=> moveLeftHeld = v);
   bindHold(btnRight, (v)=> moveRightHeld = v);
 
-  // Drag-to-move on canvas
+  // Drag-to-move
   function pointerMove(clientX){
     const rect = canvas.getBoundingClientRect();
     const x = clientX - rect.left;
@@ -369,7 +344,7 @@
   canvas.addEventListener("pointerdown", (e)=>{ e.preventDefault(); pointerMove(e.clientX); canvas.setPointerCapture(e.pointerId); });
   canvas.addEventListener("pointermove", (e)=>{ if (e.buttons) pointerMove(e.clientX); });
 
-  // ---------- Collision ----------
+  // Collision
   function dist2(ax, ay, bx, by){
     const dx = ax - bx, dy = ay - by;
     return dx*dx + dy*dy;
@@ -406,7 +381,6 @@
       );
     }
 
-    // Level up pacing
     const newLevel = 1 + Math.floor(state.score / 160);
     if (newLevel !== state.level){
       state.level = newLevel;
@@ -421,34 +395,32 @@
     updateHUD();
   }
 
-  // ---------- Background: Co. Mayo vibe (sea, coastline, hills, lighthouse) ----------
+  // Background
   function drawMayoBackground(dt){
     state.seaPhase += dt * 0.9;
 
-    // Sky gradient
-    const skyTop = 0;
     const horizonY = H() * 0.52;
 
-    // subtle sky
     ctx.save();
-    const skyGrad = ctx.createLinearGradient(0, skyTop, 0, horizonY);
+
+    // Sky
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, horizonY);
     skyGrad.addColorStop(0, "rgba(10,16,28,1)");
     skyGrad.addColorStop(1, "rgba(18,28,46,1)");
     ctx.fillStyle = skyGrad;
     ctx.fillRect(0, 0, W(), horizonY);
 
-    // distant glow near horizon
     ctx.fillStyle = "rgba(120,160,255,0.08)";
     ctx.fillRect(0, horizonY - 30, W(), 60);
 
-    // Sea gradient
+    // Sea
     const seaGrad = ctx.createLinearGradient(0, horizonY, 0, H());
     seaGrad.addColorStop(0, "rgba(10,32,48,1)");
     seaGrad.addColorStop(1, "rgba(6,18,30,1)");
     ctx.fillStyle = seaGrad;
     ctx.fillRect(0, horizonY, W(), H()-horizonY);
 
-    // Wave lines (animated)
+    // Waves
     ctx.globalAlpha = 0.22;
     ctx.lineWidth = 1;
     ctx.strokeStyle = "rgba(170,210,255,1)";
@@ -465,7 +437,7 @@
     }
     ctx.globalAlpha = 1;
 
-    // Coastline silhouette (Achill-ish / cliffs)
+    // Coastline
     ctx.fillStyle = "rgba(8,12,16,0.92)";
     ctx.beginPath();
     ctx.moveTo(0, horizonY + 40);
@@ -481,7 +453,7 @@
     ctx.closePath();
     ctx.fill();
 
-    // Hills behind coastline
+    // Hills
     ctx.fillStyle = "rgba(14,22,20,0.55)";
     ctx.beginPath();
     ctx.moveTo(0, horizonY);
@@ -492,7 +464,7 @@
     ctx.closePath();
     ctx.fill();
 
-    // Lighthouse silhouette (simple)
+    // Lighthouse
     const lx = W()*0.86, ly = horizonY + 26;
     ctx.fillStyle = "rgba(10,10,12,0.95)";
     ctx.beginPath();
@@ -502,9 +474,7 @@
     ctx.lineTo(lx-6, ly-52);
     ctx.closePath();
     ctx.fill();
-    // top box
     ctx.fillRect(lx-9, ly-58, 18, 8);
-    // tiny light glow
     ctx.fillStyle = "rgba(255,245,210,0.12)";
     ctx.beginPath();
     ctx.arc(lx, ly-54, 18, 0, Math.PI*2);
@@ -513,7 +483,7 @@
     ctx.restore();
   }
 
-  // ---------- Drawing: entities ----------
+  // Drawing helpers
   function roundRect(c, x, y, w, h, r){
     c.beginPath();
     c.moveTo(x+r, y);
@@ -563,16 +533,20 @@
     ctx.restore();
   }
 
+  // ====== BUBBLES: SAME COLOUR SCHEME (NO GENDER GIVEAWAY) ======
+  const BUBBLE_FILL   = "rgba(235,245,255,0.10)";
+  const BUBBLE_STROKE = "rgba(235,245,255,0.28)";
+
   function drawInvader(inv){
     ctx.save();
     ctx.translate(inv.x, inv.y);
 
     ctx.beginPath();
     ctx.arc(0, 0, inv.r + 10, 0, Math.PI*2);
-    ctx.fillStyle = inv.g === "m" ? "rgba(130,190,255,0.14)" : "rgba(255,150,220,0.12)";
+    ctx.fillStyle = BUBBLE_FILL;
     ctx.fill();
     ctx.lineWidth = 1;
-    ctx.strokeStyle = inv.g === "m" ? "rgba(130,190,255,0.35)" : "rgba(255,150,220,0.32)";
+    ctx.strokeStyle = BUBBLE_STROKE;
     ctx.stroke();
 
     ctx.font = "16px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
@@ -581,12 +555,7 @@
     ctx.fillStyle = "rgba(245,248,255,0.95)";
     ctx.fillText(inv.word, 0, 0);
 
-    // tiny gender marker in practice mode
-    if (state.showHints){
-      ctx.font = "11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
-      ctx.fillStyle = "rgba(245,248,255,0.55)";
-      ctx.fillText(inv.g.toUpperCase(), 0, 22);
-    }
+    // IMPORTANT: no gender marker, ever.
 
     ctx.restore();
   }
@@ -629,19 +598,17 @@
     ctx.restore();
   }
 
-  // ---------- Main loop ----------
+  // Main loop
   let last = performance.now();
 
   function tick(now){
     const dt = Math.min(0.033, (now - last)/1000);
     last = now;
 
-    // keep player placed if canvas size changes
     if (player.y === 0) positionPlayer();
     else player.y = H() - 46;
 
-    // move buttons (hold)
-    const moveSpeed = 340; // px/sec
+    const moveSpeed = 340;
     if (!state.over && !state.paused){
       if (moveLeftHeld)  player.x -= moveSpeed * dt;
       if (moveRightHeld) player.x += moveSpeed * dt;
@@ -659,7 +626,6 @@
       for (const inv of state.invaders) inv.y += inv.vy * dt;
       for (const s of state.shots) s.y += s.vy * dt;
 
-      // collisions
       for (const inv of state.invaders){
         if (inv.hit) continue;
         for (const s of state.shots){
@@ -673,7 +639,6 @@
         }
       }
 
-      // invaders reaching ground
       for (const inv of state.invaders){
         if (inv.hit) continue;
         if (inv.y >= H() - 24){
@@ -690,12 +655,10 @@
         }
       }
 
-      // cleanup
       state.invaders = state.invaders.filter(inv => inv.y < H() + 60 && !inv.hit);
       state.shots = state.shots.filter(s => s.y > -60 && s.y < H() + 60);
     }
 
-    // draw
     ctx.clearRect(0, 0, W(), H());
     drawMayoBackground(dt);
     drawGround();
