@@ -50,7 +50,6 @@
     }
     .small{ opacity:0.92; }
 
-    /* Touch controls */
     .controls{
       margin-top:10px;
       display:grid;
@@ -80,12 +79,7 @@
       gap:10px;
       margin-top:10px;
     }
-    .note{
-      margin-top:8px;
-      opacity:0.9;
-      font-size:12px;
-    }
-
+    .note{ margin-top:8px; opacity:0.9; font-size:12px; }
     @media (min-width: 860px){
       .controls{ grid-template-columns: 1fr 1fr 1fr 1fr; }
       .btnRow{ grid-template-columns: 1fr 1fr 1fr; }
@@ -94,7 +88,6 @@
 </head>
 <body>
   <div class="wrap">
-
     <div class="hud">
       <div class="left">
         <div class="pill" style="font-size:16px; font-weight:700;">Cosaint na bhFocal</div>
@@ -105,15 +98,15 @@
         <div class="pill">Mode: <b id="mode">Practice</b></div>
       </div>
       <div class="pill">
-        Keys: M/F shoot · P pause · R restart · H hints
+        Keys: <b>Z</b> masculine · <b>X</b> feminine · P pause · R restart · H hints
       </div>
     </div>
 
     <canvas id="game" width="960" height="520" aria-label="Cosaint na bhFocal game canvas"></canvas>
 
     <div class="controls" aria-label="Touch controls">
-      <div class="btn m" id="btnM">Masculine (M)</div>
-      <div class="btn f" id="btnF">Feminine (F)</div>
+      <div class="btn m" id="btnM">Masculine (Z)</div>
+      <div class="btn f" id="btnF">Feminine (X)</div>
       <div class="btn small" id="btnP">Pause / Resume</div>
       <div class="btn small" id="btnH">Hints: On/Off</div>
     </div>
@@ -122,48 +115,78 @@
       <div class="btn small" id="btnLeft">◀ Move</div>
       <div class="btn small" id="btnRight">Move ▶</div>
     </div>
-    <div class="note small">
-      Tip: you can also drag your finger left/right on the game area to move.
-    </div>
+    <div class="note small">Tip: drag left/right on the game to move.</div>
 
     <div class="panel">
       <div class="small">
-        Co. Mayo-themed nouns fall. Shoot with <b>Masculine</b> or <b>Feminine</b>.
-        Wrong shot or missed word = lose a life.
+        Mayo-themed nouns fall. Shoot with masculine or feminine. Wrong shot or missed word = lose a life.
       </div>
       <div class="small" style="margin-top:6px;">
-        Hint phrases use a teaching heuristic: adjective after a <i>feminine</i> noun often lenites (e.g. <i>sráid mhór</i>)
-        while after a <i>masculine</i> noun often doesn’t (e.g. <i>teach mór</i>).
+        Hints are for reinforcement: feminine nouns often lenite an adjective after them (e.g. <i>sráid mhór</i>) while masculine often doesn’t (<i>teach mór</i>).
       </div>
     </div>
-
   </div>
 
 <script>
 (() => {
   "use strict";
 
+  // ============================================================
+  // BIGGER word bank (Co. Mayo vibe: coast + countryside + community)
+  // NOTE: genders can vary by dialect/usage; tailor as you like.
+  // ============================================================
   const NOUNS = [
-    // Coastal life
-    { w: "bád", g: "m" },        { w: "iasc", g: "m" },       { w: "cladach", g: "m" },
-    { w: "calafort", g: "m" },   { w: "tonn", g: "f" },       { w: "taoide", g: "f" },
-    { w: "farraige", g: "f" },   { w: "trá", g: "f" },        { w: "gaoth", g: "f" },
-    { w: "báisteach", g: "f" },  { w: "oíche", g: "f" },
+    // --- Coastal / sea ---
+    { w:"bád", g:"m" }, { w:"iasc", g:"m" }, { w:"cladach", g:"m" }, { w:"calafort", g:"m" },
+    { w:"tonn", g:"f" }, { w:"taoide", g:"f" }, { w:"farraige", g:"f" }, { w:"trá", g:"f" },
+    { w:"gaoth", g:"f" }, { w:"báisteach", g:"f" }, { w:"stoirm", g:"f" }, { w:"ceo", g:"m" },
+    { w:"grian", g:"f" }, { w:"gealach", g:"f" }, { w:"réalta", g:"f" }, { w:"spéir", g:"f" },
+    { w:"carraig", g:"f" }, { w:"cloch", g:"f" }, { w:"gainimh", g:"f" }, { w:"salann", g:"m" },
+    { w:"bá", g:"f" }, { w:"cuan", g:"m" }, { w:"oileán", g:"m" }, { w:"linn", g:"f" },
+    { w:"port", g:"m" }, { w:"seoltóireacht", g:"f" }, { w:"líon", g:"m" }, { w:"crúca", g:"m" },
+    { w:"iascaire", g:"m" }, { w:"bádóir", g:"m" }, { w:"lampa", g:"m" }, { w:"tinteán", g:"m" },
+    { w:"cé", g:"f" }, { w:"linnteán", g:"m" }, { w:"maor", g:"m" },
 
-    // Countryside
-    { w: "cnoc", g: "m" },       { w: "páirc", g: "f" },      { w: "móin", g: "f" },
-    { w: "bó", g: "f" },         { w: "capall", g: "m" },     { w: "caora", g: "f" },
-    { w: "crann", g: "m" },      { w: "loch", g: "m" },       { w: "abhainn", g: "f" },
-    { w: "droichead", g: "m" },  { w: "bóthar", g: "m" },     { w: "slí", g: "f" },
+    // --- Countryside / farming ---
+    { w:"cnoc", g:"m" }, { w:"sliabh", g:"m" }, { w:"gleann", g:"m" }, { w:"machaire", g:"m" },
+    { w:"páirc", g:"f" }, { w:"móin", g:"f" }, { w:"portach", g:"m" }, { w:"talamh", g:"m" },
+    { w:"féar", g:"m" }, { w:"fómhar", g:"m" }, { w:"earrach", g:"m" }, { w:"geimhreadh", g:"m" },
+    { w:"samhradh", g:"m" }, { w:"abhainn", g:"f" }, { w:"sruth", g:"m" }, { w:"tobar", g:"m" },
+    { w:"loch", g:"m" }, { w:"droichead", g:"m" }, { w:"bóthar", g:"m" }, { w:"slí", g:"f" },
+    { w:"crann", g:"m" }, { w:"coill", g:"f" }, { w:"duilleog", g:"f" }, { w:"bláth", g:"m" },
+    { w:"fréamh", g:"f" }, { w:"síol", g:"m" }, { w:"éan", g:"m" }, { w:"madra", g:"m" },
+    { w:"cat", g:"m" }, { w:"bó", g:"f" }, { w:"lao", g:"m" }, { w:"caora", g:"f" },
+    { w:"uan", g:"m" }, { w:"capall", g:"m" }, { w:"asal", g:"m" }, { w:"muc", g:"f" },
+    { w:"capaillín", g:"m" }, { w:"feirm", g:"f" }, { w:"tréad", g:"m" }, { w:"aithe", g:"f" },
 
-    // Home/community
-    { w: "teach", g: "m" },      { w: "doras", g: "m" },      { w: "fuinneog", g: "f" },
-    { w: "sráid", g: "f" },      { w: "siopa", g: "m" },      { w: "scoil", g: "f" },
-    { w: "séipéal", g: "m" },    { w: "cluiche", g: "m" },    { w: "ceol", g: "m" },
-    { w: "obair", g: "f" },      { w: "ceist", g: "f" },      { w: "páiste", g: "m" },
-    { w: "bean", g: "f" },       { w: "fear", g: "m" },       { w: "baile", g: "m" },
+    // --- Home / community ---
+    { w:"teach", g:"m" }, { w:"doras", g:"m" }, { w:"fuinneog", g:"f" }, { w:"seomra", g:"m" },
+    { w:"cistin", g:"f" }, { w:"leaba", g:"f" }, { w:"bord", g:"m" }, { w:"cathaoir", g:"f" },
+    { w:"lampa", g:"m" }, { w:"eochair", g:"f" }, { w:"balla", g:"m" }, { w:"urlár", g:"m" },
+    { w:"díon", g:"m" }, { w:"gairdín", g:"m" }, { w:"geata", g:"m" }, { w:"páipéar", g:"m" },
+    { w:"peann", g:"m" }, { w:"leabhar", g:"m" }, { w:"bosca", g:"m" }, { w:"mála", g:"m" },
+    { w:"cupán", g:"m" }, { w:"pláta", g:"m" }, { w:"scian", g:"f" }, { w:"forc", g:"f" },
+    { w:"spúnóg", g:"f" }, { w:"arán", g:"m" }, { w:"im", g:"m" }, { w:"bainne", g:"m" },
+    { w:"tae", g:"m" }, { w:"caife", g:"m" }, { w:"uisce", g:"m" },
+
+    // --- Town / services / people ---
+    { w:"baile", g:"m" }, { w:"sráid", g:"f" }, { w:"siopa", g:"m" }, { w:"scoil", g:"f" },
+    { w:"séipéal", g:"m" }, { w:"oifig", g:"f" }, { w:"óstán", g:"m" }, { w:"pub", g:"m" },
+    { w:"margadh", g:"m" }, { w:"stáisiún", g:"m" }, { w:"bus", g:"m" }, { w:"carr", g:"m" },
+    { w:"rothar", g:"m" }, { w:"dochtúir", g:"m" }, { w:"banaltra", g:"f" }, { w:"múinteoir", g:"m" },
+    { w:"dalta", g:"m" }, { w:"páiste", g:"m" }, { w:"bean", g:"f" }, { w:"fear", g:"m" },
+    { w:"cara", g:"m" }, { w:"teaghlach", g:"m" }, { w:"comharsa", g:"m" }, { w:"lucht", g:"m" },
+
+    // --- Sport / culture ---
+    { w:"cluiche", g:"m" }, { w:"liathróid", g:"f" }, { w:"foireann", g:"f" }, { w:"iománaíocht", g:"f" },
+    { w:"peil", g:"f" }, { w:"ceol", g:"m" }, { w:"amhrán", g:"m" }, { w:"damhsa", g:"m" },
+    { w:"scéal", g:"m" }, { w:"nuacht", g:"f" }, { w:"comhrá", g:"m" }, { w:"focal", g:"m" },
+    { w:"abairt", g:"f" }, { w:"ceist", g:"f" }, { w:"freagra", g:"m" }, { w:"obair", g:"f" },
+    { w:"aimsir", g:"f" }, { w:"oíche", g:"f" }, { w:"lá", g:"m" }, { w:"seachtain", g:"f" },
+    { w:"bliain", g:"f" }, { w:"am", g:"m" },
   ];
 
+  // ---------- Canvas ----------
   const canvas = document.getElementById("game");
   const ctx = canvas.getContext("2d", { alpha: false });
 
@@ -180,6 +203,7 @@
   requestAnimationFrame(() => fitCanvas());
   window.addEventListener("resize", () => fitCanvas());
 
+  // ---------- HUD ----------
   const scoreEl  = document.getElementById("score");
   const streakEl = document.getElementById("streak");
   const livesEl  = document.getElementById("lives");
@@ -211,31 +235,24 @@
     levelEl.textContent  = String(state.level);
     modeEl.textContent   = state.showHints ? "Practice" : "Test";
   }
-
   function positionPlayer(){
     player.x = W()/2 - player.w/2;
     player.y = H() - 46;
   }
 
-  // ====== SPEED TUNING ======
-  // Requested: ~1/3 falling speed.
-  const FALL_SPEED_MULTIPLIER = 0.33;
+  // ===== Speed tuning =====
+  const FALL_SPEED_MULTIPLIER = 0.33; // ~1/3 speed
 
   function spawnInterval(level){
-    // Keep spawn rate roughly the same; only slow the descent.
     return Math.max(0.55, 1.35 - level*0.10);
   }
-
   function invaderSpeed(level){
-    // Base speed scaled down to ~1/3.
     const base = 32 + level*6;
     return base * FALL_SPEED_MULTIPLIER;
   }
-
   function shotSpeed(){ return 540; }
 
   function randChoice(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
-
   function showMessage(text, seconds=1.2){
     state.message.text = text;
     state.message.until = state.time + seconds;
@@ -252,12 +269,12 @@
     state.nextSpawn = 0.7;
     state.invaders.length = 0;
     state.shots.length = 0;
-    state.message = { text: "Tap Masculine/Feminine to shoot. Drag to move.", until: 2.8 };
+    state.message = { text: "Z = masculine, X = feminine. Tap buttons on phone.", until: 2.8 };
     updateHUD();
     positionPlayer();
   }
 
-  // ===== Hint engine (simplified) =====
+  // Hint engine (simplified)
   function lenite(word){
     if (!word) return word;
     const first = word[0].toLowerCase();
@@ -301,14 +318,14 @@
     });
   }
 
-  // Keyboard
+  // Keyboard: Z/X now
   window.addEventListener("keydown", (e) => {
     const k = e.key.toLowerCase();
     if (k === "p") state.paused = !state.paused;
     if (k === "r") resetGame();
     if (k === "h") { state.showHints = !state.showHints; updateHUD(); }
-    if (k === "m") fireShot("m");
-    if (k === "f") fireShot("f");
+    if (k === "z") fireShot("m"); // masculine
+    if (k === "x") fireShot("f"); // feminine
   });
 
   // Touch buttons
@@ -362,9 +379,8 @@
 
       const gTxt = inv.g === "m" ? "masc" : "fem";
       showMessage(
-        state.showHints
-          ? `✓ ${inv.word} (${gTxt}) — e.g. “${examplePhrase(inv.word, inv.g)}”`
-          : `✓ ${inv.word} (${gTxt})`,
+        state.showHints ? `✓ ${inv.word} (${gTxt}) — e.g. “${examplePhrase(inv.word, inv.g)}”`
+                        : `✓ ${inv.word} (${gTxt})`,
         state.showHints ? 1.35 : 1.0
       );
     } else {
@@ -374,9 +390,8 @@
 
       const gTxt = inv.g === "m" ? "masc" : "fem";
       showMessage(
-        state.showHints
-          ? `✗ ${inv.word} is ${gTxt} — e.g. “${examplePhrase(inv.word, inv.g)}”`
-          : `✗ ${inv.word} is ${gTxt}`,
+        state.showHints ? `✗ ${inv.word} is ${gTxt} — e.g. “${examplePhrase(inv.word, inv.g)}”`
+                        : `✗ ${inv.word} is ${gTxt}`,
         state.showHints ? 1.55 : 1.25
       );
     }
@@ -391,19 +406,16 @@
       state.over = true;
       showMessage("Game Over — tap Restart", 999);
     }
-
     updateHUD();
   }
 
-  // Background
+  // Background (Mayo vibe)
   function drawMayoBackground(dt){
     state.seaPhase += dt * 0.9;
-
     const horizonY = H() * 0.52;
 
     ctx.save();
 
-    // Sky
     const skyGrad = ctx.createLinearGradient(0, 0, 0, horizonY);
     skyGrad.addColorStop(0, "rgba(10,16,28,1)");
     skyGrad.addColorStop(1, "rgba(18,28,46,1)");
@@ -413,14 +425,12 @@
     ctx.fillStyle = "rgba(120,160,255,0.08)";
     ctx.fillRect(0, horizonY - 30, W(), 60);
 
-    // Sea
     const seaGrad = ctx.createLinearGradient(0, horizonY, 0, H());
     seaGrad.addColorStop(0, "rgba(10,32,48,1)");
     seaGrad.addColorStop(1, "rgba(6,18,30,1)");
     ctx.fillStyle = seaGrad;
     ctx.fillRect(0, horizonY, W(), H()-horizonY);
 
-    // Waves
     ctx.globalAlpha = 0.22;
     ctx.lineWidth = 1;
     ctx.strokeStyle = "rgba(170,210,255,1)";
@@ -437,7 +447,6 @@
     }
     ctx.globalAlpha = 1;
 
-    // Coastline
     ctx.fillStyle = "rgba(8,12,16,0.92)";
     ctx.beginPath();
     ctx.moveTo(0, horizonY + 40);
@@ -453,7 +462,6 @@
     ctx.closePath();
     ctx.fill();
 
-    // Hills
     ctx.fillStyle = "rgba(14,22,20,0.55)";
     ctx.beginPath();
     ctx.moveTo(0, horizonY);
@@ -464,7 +472,6 @@
     ctx.closePath();
     ctx.fill();
 
-    // Lighthouse
     const lx = W()*0.86, ly = horizonY + 26;
     ctx.fillStyle = "rgba(10,10,12,0.95)";
     ctx.beginPath();
@@ -518,7 +525,6 @@
 
     ctx.fillStyle = "rgba(130,190,255,0.40)";
     ctx.fillRect(pad, -cannonH, cannonW, cannonH);
-
     ctx.fillStyle = "rgba(255,150,220,0.34)";
     ctx.fillRect(pad*2 + cannonW, -cannonH, cannonW, cannonH);
 
@@ -526,14 +532,14 @@
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillStyle = "rgba(210,235,255,0.95)";
-    ctx.fillText("M", pad + cannonW/2, -cannonH/2);
+    ctx.fillText("Z", pad + cannonW/2, -cannonH/2);
     ctx.fillStyle = "rgba(255,220,245,0.95)";
-    ctx.fillText("F", pad*2 + cannonW + cannonW/2, -cannonH/2);
+    ctx.fillText("X", pad*2 + cannonW + cannonW/2, -cannonH/2);
 
     ctx.restore();
   }
 
-  // ====== BUBBLES: SAME COLOUR SCHEME (NO GENDER GIVEAWAY) ======
+  // Neutral bubbles (no gender giveaway)
   const BUBBLE_FILL   = "rgba(235,245,255,0.10)";
   const BUBBLE_STROKE = "rgba(235,245,255,0.28)";
 
@@ -554,8 +560,6 @@
     ctx.textBaseline = "middle";
     ctx.fillStyle = "rgba(245,248,255,0.95)";
     ctx.fillText(inv.word, 0, 0);
-
-    // IMPORTANT: no gender marker, ever.
 
     ctx.restore();
   }
