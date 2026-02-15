@@ -15,7 +15,7 @@
       min-height:100vh;
       padding:12px;
     }
-    .wrap{ width:min(980px,100%); }
+    .wrap{ width:min(1020px,100%); }
 
     .hud{
       display:flex; gap:8px; flex-wrap:wrap;
@@ -29,6 +29,38 @@
       padding:6px 10px;
       border-radius:999px;
       white-space:nowrap;
+    }
+
+    .controlsTop{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom:10px;
+    }
+    .selectWrap{
+      display:flex; gap:8px; align-items:center; flex-wrap:wrap;
+      background:rgba(255,255,255,0.06);
+      border:1px solid rgba(255,255,255,0.10);
+      padding:8px 10px;
+      border-radius:12px;
+      color:#d7e2ff;
+      width:fit-content;
+    }
+    label{ font-size:13px; opacity:0.95; }
+    select{
+      background:rgba(0,0,0,0.35);
+      border:1px solid rgba(255,255,255,0.18);
+      color:#eaf1ff;
+      padding:8px 10px;
+      border-radius:10px;
+      font-size:14px;
+      outline:none;
+    }
+    select:focus{
+      border-color: rgba(170,210,255,0.55);
+      box-shadow: 0 0 0 2px rgba(170,210,255,0.18);
     }
 
     canvas{
@@ -93,6 +125,7 @@
       .hud{ font-size:12px; }
       .pill{ padding:5px 9px; }
       .btn{ font-size:15px; padding:12px 10px; }
+      select{ font-size:13px; padding:7px 9px; }
     }
   </style>
 </head>
@@ -110,7 +143,24 @@
       <div class="pill">Keys: <b>Z</b> masc · <b>X</b> fem · P pause · R restart · H hints</div>
     </div>
 
-    <!-- Taller playfield to reduce crowding -->
+    <div class="controlsTop">
+      <div class="selectWrap">
+        <label for="category">Category</label>
+        <select id="category">
+          <option value="all">All</option>
+          <option value="coast">Coast / Sea</option>
+          <option value="country">Countryside / Farming</option>
+          <option value="home">Home / Community</option>
+          <option value="town">Town / Services</option>
+          <option value="sport">Sport / Culture</option>
+          <option value="weather">Weather / Nature</option>
+        </select>
+      </div>
+      <div class="selectWrap" style="opacity:0.95;">
+        <span>Selected bank:</span> <b id="bankCount">0</b> <span>words</span>
+      </div>
+    </div>
+
     <canvas id="game" width="960" height="620" aria-label="Cosaint na bhFocal game canvas"></canvas>
 
     <div class="controls" aria-label="Touch controls">
@@ -129,7 +179,7 @@
     <div class="note">Tip: drag left/right on the game area to move.</div>
 
     <div class="panel">
-      Mayo-themed nouns fall. Shoot with masculine or feminine. Wrong shot or missed word = lose a life.
+      Choose a category to drill (e.g. Coast/Sea). Bubbles are neutral — no colour hints. If the screen gets busy, spawning slows automatically.
     </div>
   </div>
 
@@ -137,34 +187,145 @@
 (() => {
   "use strict";
 
-  // Big-ish word bank (expand freely — doesn’t affect crowding now)
-  const NOUNS = [
-    // Coast / sea
-    { w:"bád", g:"m" }, { w:"iasc", g:"m" }, { w:"cladach", g:"m" }, { w:"calafort", g:"m" },
-    { w:"tonn", g:"f" }, { w:"taoide", g:"f" }, { w:"farraige", g:"f" }, { w:"trá", g:"f" },
-    { w:"gaoth", g:"f" }, { w:"báisteach", g:"f" }, { w:"stoirm", g:"f" }, { w:"ceo", g:"m" },
-    { w:"carraig", g:"f" }, { w:"cloch", g:"f" }, { w:"gainimh", g:"f" }, { w:"salann", g:"m" },
-    { w:"bá", g:"f" }, { w:"cuan", g:"m" }, { w:"oileán", g:"m" }, { w:"port", g:"m" },
+  // ============================================================
+  // Vocabulary by category (large bank; edit freely)
+  // Each entry is { w:"word", g:"m"|"f" }.
+  // Note: Some genders can be dialect/usage-sensitive.
+  // ============================================================
 
-    // Countryside
-    { w:"cnoc", g:"m" }, { w:"sliabh", g:"m" }, { w:"gleann", g:"m" }, { w:"páirc", g:"f" },
-    { w:"móin", g:"f" }, { w:"portach", g:"m" }, { w:"talamh", g:"m" }, { w:"féar", g:"m" },
-    { w:"abhainn", g:"f" }, { w:"loch", g:"m" }, { w:"tobar", g:"m" }, { w:"droichead", g:"m" },
-    { w:"bóthar", g:"m" }, { w:"slí", g:"f" }, { w:"crann", g:"m" }, { w:"coill", g:"f" },
-    { w:"bláth", g:"m" }, { w:"éan", g:"m" }, { w:"madra", g:"m" }, { w:"cat", g:"m" },
-    { w:"bó", g:"f" }, { w:"lao", g:"m" }, { w:"caora", g:"f" }, { w:"uan", g:"m" },
-    { w:"capall", g:"m" }, { w:"asal", g:"m" }, { w:"muc", g:"f" }, { w:"feirm", g:"f" },
+  const BANK = {
+    coast: [
+      // sea + shore + fishing
+      {w:"bád",g:"m"},{w:"iasc",g:"m"},{w:"cladach",g:"m"},{w:"calafort",g:"m"},
+      {w:"cuan",g:"m"},{w:"port",g:"m"},{w:"bá",g:"f"},{w:"trá",g:"f"},
+      {w:"tonn",g:"f"},{w:"taoide",g:"f"},{w:"farraige",g:"f"},{w:"muir",g:"f"},
+      {w:"oileán",g:"m"},{w:"carraig",g:"f"},{w:"cloch",g:"f"},{w:"gainimh",g:"f"},
+      {w:"salann",g:"m"},{w:"ceilp",g:"f"},{w:"feamainn",g:"f"},{w:"sliogán",g:"m"},
+      {w:"portán",g:"m"},{w:"gliomach",g:"m"},{w:"ron",g:"m"},{w:"deilf",g:"f"},
+      {w:"éan mara",g:"m"},{w:"faiche",g:"f"},{w:"aill",g:"f"},{w:"ceann tíre",g:"m"},
+      {w:"solas",g:"m"},{w:"tigh solais",g:"m"},{w:"crúca",g:"m"},{w:"líon",g:"m"},
+      {w:"iascaire",g:"m"},{w:"bádóir",g:"m"},{w:"snámh",g:"m"},{w:"snámhóir",g:"m"},
+      {w:"curach",g:"m"},{w:"seoltóireacht",g:"f"},{w:"seol",g:"m"},{w:"ramha",g:"m"},
+      {w:"teachtaireacht",g:"f"},{w:"comhartha",g:"m"},{w:"treo",g:"m"},{w:"stua",g:"f"},
+      {w:"uisce",g:"m"},{w:"sruth",g:"m"},{w:"dronuilleog",g:"f"}, // (rare; keeps variety)
+      {w:"tóin",g:"f"},{w:"cladachán",g:"m"},{w:"duga",g:"m"},
+      {w:"buille",g:"m"},{w:"gaineamhchloch",g:"f"},{w:"cladach garbh",g:"m"},
+      {w:"bád farantóireachta",g:"m"},{w:"bád tarrthála",g:"m"},
+      {w:"ceo mara",g:"m"},{w:"sprae",g:"m"},{w:"boladh",g:"m"},
+      {w:"lainnseáil",g:"f"},{w:"cúr",g:"m"},{w:"báite",g:"f"},
+    ],
 
-    // Home / community
-    { w:"teach", g:"m" }, { w:"doras", g:"m" }, { w:"fuinneog", g:"f" }, { w:"seomra", g:"m" },
-    { w:"cistin", g:"f" }, { w:"leaba", g:"f" }, { w:"bord", g:"m" }, { w:"cathaoir", g:"f" },
-    { w:"eochair", g:"f" }, { w:"balla", g:"m" }, { w:"urlár", g:"m" }, { w:"díon", g:"m" },
-    { w:"baile", g:"m" }, { w:"sráid", g:"f" }, { w:"siopa", g:"m" }, { w:"scoil", g:"f" },
-    { w:"séipéal", g:"m" }, { w:"cluiche", g:"m" }, { w:"ceol", g:"m" }, { w:"obair", g:"f" },
-    { w:"ceist", g:"f" }, { w:"freagra", g:"m" }, { w:"páiste", g:"m" }, { w:"bean", g:"f" }, { w:"fear", g:"m" },
-    { w:"aimsir", g:"f" }, { w:"oíche", g:"f" }, { w:"lá", g:"m" }, { w:"seachtain", g:"f" }, { w:"bliain", g:"f" }, { w:"am", g:"m" },
-  ];
+    country: [
+      // land + bog + hills + farming
+      {w:"cnoc",g:"m"},{w:"sliabh",g:"m"},{w:"gleann",g:"m"},{w:"machaire",g:"m"},
+      {w:"páirc",g:"f"},{w:"móin",g:"f"},{w:"portach",g:"m"},{w:"talamh",g:"m"},
+      {w:"féar",g:"m"},{w:"fómhar",g:"m"},{w:"earrach",g:"m"},{w:"geimhreadh",g:"m"},
+      {w:"samhradh",g:"m"},{w:"abhainn",g:"f"},{w:"loch",g:"m"},{w:"tobar",g:"m"},
+      {w:"droichead",g:"m"},{w:"bóthar",g:"m"},{w:"slí",g:"f"},{w:"cosán",g:"m"},
+      {w:"crann",g:"m"},{w:"coill",g:"f"},{w:"duilleog",g:"f"},{w:"bláth",g:"m"},
+      {w:"fréamh",g:"f"},{w:"síol",g:"m"},{w:"claí",g:"m"},{w:"geata",g:"m"},
+      {w:"fál",g:"m"},{w:"tua",g:"f"},{w:"sluasaid",g:"f"},{w:"rác",g:"m"},
+      {w:"spád",g:"m"},{w:"tarracóir",g:"m"},{w:"leoraí",g:"m"},
+      {w:"feirm",g:"f"},{w:"feirmeoir",g:"m"},{w:"tréad",g:"m"},{w:"cairéal",g:"m"},
+      {w:"bó",g:"f"},{w:"lao",g:"m"},{w:"caora",g:"f"},{w:"uan",g:"m"},
+      {w:"capall",g:"m"},{w:"asal",g:"m"},{w:"muc",g:"f"},{w:"cearc",g:"f"},
+      {w:"coileach",g:"m"},{w:"sicín",g:"m"},{w:"madra",g:"m"},{w:"cat",g:"m"},
+      {w:"éan",g:"m"},{w:"préachán",g:"m"},{w:"fia",g:"m"},{w:"giorria",g:"m"},
+      {w:"sionnach",g:"m"},{w:"damh",g:"m"},
+      {w:"clais",g:"f"},{w:"cairn",g:"m"},{w:"carraigín",g:"m"},
+      {w:"sceach",g:"f"},{w:"draighean",g:"m"},{w:"fraoch",g:"m"},
+      {w:"talamh móna",g:"m"},{w:"currach",g:"f"}, // marsh
+      {w:"móinfhéar",g:"m"},{w:"lochán",g:"m"},
+    ],
 
+    home: [
+      // home + everyday life
+      {w:"teach",g:"m"},{w:"baile",g:"m"},{w:"seomra",g:"m"},{w:"cistin",g:"f"},
+      {w:"seomra folctha",g:"m"},{w:"seomra suí",g:"m"},{w:"doras",g:"m"},{w:"fuinneog",g:"f"},
+      {w:"balla",g:"m"},{w:"urlár",g:"m"},{w:"díon",g:"m"},{w:"simléar",g:"m"},
+      {w:"staighre",g:"m"},{w:"dorchla",g:"m"},{w:"leaba",g:"f"},{w:"clár",g:"m"},
+      {w:"bord",g:"m"},{w:"cathaoir",g:"f"},{w:"tolg",g:"m"},{w:"lampa",g:"m"},
+      {w:"soilse",g:"f"},{w:"eochair",g:"f"},{w:"glas",g:"m"},{w:"bosca",g:"m"},
+      {w:"mála",g:"m"},{w:"póca",g:"m"},{w:"cóta",g:"m"},{w:"bróg",g:"f"},
+      {w:"stoca",g:"m"},{w:"hata",g:"m"},{w:"léine",g:"f"},{w:"geansaí",g:"m"},
+      {w:"cupán",g:"m"},{w:"pláta",g:"m"},{w:"babhla",g:"m"},{w:"scian",g:"f"},
+      {w:"forc",g:"f"},{w:"spúnóg",g:"f"},{w:"pota",g:"m"},{w:"panna",g:"m"},
+      {w:"arán",g:"m"},{w:"im",g:"m"},{w:"bainne",g:"m"},{w:"tae",g:"m"},
+      {w:"caife",g:"m"},{w:"siúcra",g:"m"},{w:"salann",g:"m"},{w:"piobar",g:"m"},
+      {w:"uisce",g:"m"},{w:"gloine",g:"f"},{w:"buicéad",g:"m"},
+      {w:"glantach",g:"m"},{w:"éadaí",g:"m"},{w:"níochán",g:"m"},
+      {w:"telefón",g:"m"},{w:"fón póca",g:"m"},{w:"ríomhaire",g:"m"},
+      {w:"teilifís",g:"f"},{w:"raidió",g:"m"},{w:"cábla",g:"m"},
+      {w:"peann",g:"m"},{w:"páipéar",g:"m"},{w:"leabhar",g:"m"},{w:"nóta",g:"m"},
+      {w:"pictiúr",g:"m"},{w:"scáthán",g:"m"},{w:"clog",g:"m"},
+      {w:"gairdín",g:"m"},{w:"clós",g:"m"},{w:"geata",g:"m"},
+      {w:"comharsa",g:"m"},{w:"cara",g:"m"},{w:"teaghlach",g:"m"},
+      {w:"páiste",g:"m"},{w:"bean",g:"f"},{w:"fear",g:"m"},
+      {w:"cairdeas",g:"m"},{w:"cuairt",g:"f"},{w:"cruinniú",g:"m"},
+    ],
+
+    town: [
+      // shops + institutions + transport
+      {w:"sráid",g:"f"},{w:"siopa",g:"m"},{w:"margadh",g:"m"},{w:"oifig",g:"f"},
+      {w:"óstán",g:"m"},{w:"teach tábhairne",g:"m"},{w:"café",g:"m"},{w:"bialann",g:"f"},
+      {w:"banc",g:"m"},{w:"leabharlann",g:"f"},{w:"scoil",g:"f"},{w:"coláiste",g:"m"},
+      {w:"ollscoil",g:"f"},{w:"séipéal",g:"m"},{w:"paróiste",g:"f"},
+      {w:"ospidéal",g:"m"},{w:"cógaslann",g:"f"},{w:"siopa grósaera",g:"m"},
+      {w:"búistéir",g:"m"},{w:"bácús",g:"m"},{w:"post",g:"f"},{w:"oifig an phoist",g:"f"},
+      {w:"stáisiún",g:"m"},{w:"stáisiún bus",g:"m"},{w:"stáisiún traenach",g:"m"},
+      {w:"bus",g:"m"},{w:"carr",g:"m"},{w:"tacsaí",g:"m"},{w:"rothar",g:"m"},
+      {w:"bóthar",g:"m"},{w:"crosbhóthar",g:"m"},{w:"droichead",g:"m"},
+      {w:"coirnéal",g:"m"},{w:"comhartha",g:"m"},{w:"soilse tráchta",g:"f"},
+      {w:"páirc",g:"f"},{w:"páirc imeartha",g:"f"},{w:"ionad",g:"m"},
+      {w:"ionad pobail",g:"m"},{w:"club",g:"m"},{w:"cumann",g:"m"},
+      {w:"cúirt",g:"f"},{w:"Garda",g:"m"},{w:"stáisiún Gardaí",g:"m"},
+      {w:"dochtúir",g:"m"},{w:"banaltra",g:"f"},{w:"fiaclóir",g:"m"},
+      {w:"múinteoir",g:"m"},{w:"dalta",g:"m"},{w:"bainisteoir",g:"m"},
+      {w:"oibrí",g:"m"},{w:"obair",g:"f"},{w:"pá",g:"m"},{w:"cíos",g:"m"},
+      {w:"ticéad",g:"m"},{w:"uimhir",g:"f"},{w:"seoladh",g:"m"},
+    ],
+
+    sport: [
+      // sport + music + social
+      {w:"cluiche",g:"m"},{w:"liathróid",g:"f"},{w:"foireann",g:"f"},
+      {w:"iománaíocht",g:"f"},{w:"camán",g:"m"},{w:"peil",g:"f"},
+      {w:"páirc imeartha",g:"f"},{w:"réiteoir",g:"m"},{w:"imreoir",g:"m"},
+      {w:"cúl",g:"m"},{w:"pointe",g:"m"},{w:"traenáil",g:"f"},
+      {w:"corn",g:"m"},{w:"bua",g:"m"},{w:"caillteanas",g:"m"},
+      {w:"ceol",g:"m"},{w:"amhrán",g:"m"},{w:"damhsa",g:"m"},
+      {w:"fidil",g:"f"},{w:"feadóg",g:"f"},{w:"bosca ceoil",g:"m"},
+      {w:"giotár",g:"m"},{w:"druma",g:"m"},{w:"ceoltóir",g:"m"},
+      {w:"seisiún",g:"m"},{w:"comórtas",g:"m"},{w:"féile",g:"f"},
+      {w:"scéal",g:"m"},{w:"nuacht",g:"f"},{w:"clár",g:"m"},
+      {w:"pictiúrlann",g:"f"},{w:"dráma",g:"m"},
+      {w:"comhrá",g:"m"},{w:"caint",g:"f"},{w:"focal",g:"m"},
+      {w:"abairt",g:"f"},{w:"ceist",g:"f"},{w:"freagra",g:"m"},
+      {w:"spraoi",g:"m"},{w:"caitheamh aimsire",g:"m"},
+      {w:"siúlóid",g:"f"},{w:"rith",g:"m"},{w:"snámh",g:"m"},
+    ],
+
+    weather: [
+      // weather + sky + landscape
+      {w:"aimsir",g:"f"},{w:"báisteach",g:"f"},{w:"ceo",g:"m"},
+      {w:"gaoth",g:"f"},{w:"stoirm",g:"f"},{w:"tintreach",g:"f"},
+      {w:"toirneach",g:"m"},{w:"scamall",g:"m"},{w:"scamallach",g:"m"},
+      {w:"grian",g:"f"},{w:"gréin",g:"f"},{w:"gealach",g:"f"},
+      {w:"réalta",g:"f"},{w:"spéir",g:"f"},{w:"oíche",g:"f"},
+      {w:"lá",g:"m"},{w:"maidin",g:"f"},{w:"tráthnóna",g:"m"},
+      {w:"oíche",g:"f"},{w:"seachtain",g:"f"},{w:"mí",g:"m"},{w:"bliain",g:"f"},
+      {w:"fómhar",g:"m"},{w:"earrach",g:"m"},{w:"samhradh",g:"m"},{w:"geimhreadh",g:"m"},
+      {w:"sioc",g:"m"},{w:"sneachta",g:"m"},
+      {w:"fuar",g:"m"},{w:"teas",g:"m"},
+      {w:"dúiche",g:"f"},{w:"tír",g:"f"},{w:"ceantar",g:"m"},
+      {w:"cnoc",g:"m"},{w:"sliabh",g:"m"},{w:"gleann",g:"m"},
+      {w:"abhainn",g:"f"},{w:"loch",g:"m"},{w:"coill",g:"f"},
+      {w:"fraoch",g:"m"},{w:"carraig",g:"f"},{w:"aill",g:"f"},
+    ]
+  };
+
+  // ALL = concatenation (computed later)
+
+  // ---------- Canvas ----------
   const canvas = document.getElementById("game");
   const ctx = canvas.getContext("2d", { alpha:false });
 
@@ -183,11 +344,13 @@
   requestAnimationFrame(fitCanvas);
   addEventListener("resize", fitCanvas);
 
+  // ---------- HUD ----------
   const scoreEl  = document.getElementById("score");
   const streakEl = document.getElementById("streak");
   const livesEl  = document.getElementById("lives");
   const levelEl  = document.getElementById("level");
   const modeEl   = document.getElementById("mode");
+  const bankCountEl = document.getElementById("bankCount");
 
   const state = {
     over:false, paused:false,
@@ -215,10 +378,9 @@
   }
 
   // ===== Crowd-control knobs =====
-  // Keep screen readable.
   const MAX_INVADERS = isMobile ? 6 : 10;
 
-  // Slower fall speed (as requested earlier)
+  // Slower falling (kept)
   const FALL_SPEED_MULTIPLIER = 0.33;
 
   // Bubble sizing (smaller on phones)
@@ -235,16 +397,13 @@
     return base * FALL_SPEED_MULTIPLIER;
   }
 
-  // Key fix: reduce spawn rate to match slower fall + cap density
   function baseSpawnInterval(level){
-    // bigger number = fewer spawns (less crowding)
-    // gentle difficulty curve
+    // Larger = fewer spawns (prevents crowding, especially with slow fall)
     const v = 2.1 - level*0.10;
     return Math.max(1.25, v);
   }
 
   function shotSpeed(){ return 560; }
-
   function randChoice(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 
   function showMessage(text, seconds=1.1){
@@ -252,17 +411,53 @@
     state.message.until = state.time + seconds;
   }
 
+  // ---------- Active category selection ----------
+  const categorySelect = document.getElementById("category");
+
+  function computeAll(){
+    return [
+      ...BANK.coast,
+      ...BANK.country,
+      ...BANK.home,
+      ...BANK.town,
+      ...BANK.sport,
+      ...BANK.weather
+    ];
+  }
+
+  let activeCategory = "all";
+  let activeBank = computeAll();
+
+  function setCategory(cat){
+    activeCategory = cat;
+    activeBank = (cat === "all") ? computeAll() : (BANK[cat] ?? computeAll());
+    bankCountEl.textContent = String(activeBank.length);
+
+    // Clear screen so switching category feels clean and not chaotic
+    state.invaders.length = 0;
+    state.shots.length = 0;
+    state.nextSpawn = state.time + 0.6;
+    showMessage(`Category: ${categorySelect.options[categorySelect.selectedIndex].text}`, 1.0);
+  }
+
+  categorySelect.addEventListener("change", () => {
+    setCategory(categorySelect.value);
+  });
+
+  // ---------- Reset ----------
   function resetGame(){
     state.over=false; state.paused=false;
     state.score=0; state.streak=0; state.lives=3; state.level=1;
     state.time=0; state.nextSpawn=0.9;
     state.invaders.length=0; state.shots.length=0;
-    state.message = { text:"Z = masculine, X = feminine. Tap buttons on phone.", until:2.6 };
+    state.message = { text:"Z = masculine, X = feminine. Choose a category.", until:2.6 };
     updateHUD();
     positionPlayer();
+    // keep category as-is
+    bankCountEl.textContent = String(activeBank.length);
   }
 
-  // Hints (kept simple)
+  // ---------- Hints (simple) ----------
   function lenite(word){
     if (!word) return word;
     const first = word[0].toLowerCase();
@@ -278,7 +473,7 @@
     return `${noun} ${adj2}`;
   }
 
-  // Smarter spawning: try to avoid overlaps at spawn time
+  // ---------- Spawning with overlap-avoidance ----------
   function tryPickSpawnX(){
     const padding = 16;
     const minX = padding + (INVADER_R + BUBBLE_PAD);
@@ -291,10 +486,9 @@
       const x = minX + Math.random()*(maxX - minX);
       let ok = true;
       for (const inv of state.invaders){
-        // only check near-top invaders (spawn collision zone)
-        if (inv.y > 120) continue;
+        if (inv.y > 130) continue;
         const dx = inv.x - x;
-        const dy = inv.y - (-24);
+        const dy = inv.y - (-26);
         if (dx*dx + dy*dy < minDist*minDist){
           ok = false; break;
         }
@@ -305,7 +499,10 @@
   }
 
   function spawnInvader(){
-    const item = randChoice(NOUNS);
+    // Safety: if bank somehow empty, fall back to all
+    if (!activeBank || activeBank.length === 0) activeBank = computeAll();
+
+    const item = randChoice(activeBank);
     const x = tryPickSpawnX();
     state.invaders.push({
       word:item.w,
@@ -329,7 +526,7 @@
     });
   }
 
-  // Keyboard: Z/X
+  // ---------- Controls ----------
   addEventListener("keydown", (e) => {
     const k = e.key.toLowerCase();
     if (k === "p") state.paused = !state.paused;
@@ -339,7 +536,6 @@
     if (k === "x") fireShot("f");
   });
 
-  // Touch
   function bindTap(id, fn){
     document.getElementById(id).addEventListener("pointerdown", (ev)=>{ ev.preventDefault(); fn(); });
   }
@@ -349,7 +545,6 @@
   bindTap("btnR", ()=>resetGame());
   bindTap("btnH", ()=>{ state.showHints = !state.showHints; updateHUD(); });
 
-  // Hold-to-move
   let moveLeftHeld=false, moveRightHeld=false;
   function bindHold(id, setHeld){
     const el = document.getElementById(id);
@@ -361,7 +556,6 @@
   bindHold("btnLeft", v=>moveLeftHeld=v);
   bindHold("btnRight", v=>moveRightHeld=v);
 
-  // Drag-to-move
   function pointerMove(clientX){
     const rect = canvas.getBoundingClientRect();
     const x = clientX - rect.left;
@@ -370,6 +564,7 @@
   canvas.addEventListener("pointerdown", (e)=>{ e.preventDefault(); pointerMove(e.clientX); canvas.setPointerCapture(e.pointerId); });
   canvas.addEventListener("pointermove", (e)=>{ if (e.buttons) pointerMove(e.clientX); });
 
+  // ---------- Collisions ----------
   function dist2(ax,ay,bx,by){ const dx=ax-bx, dy=ay-by; return dx*dx + dy*dy; }
 
   function handleHit(inv, shot){
@@ -397,7 +592,7 @@
       );
     }
 
-    const newLevel = 1 + Math.floor(state.score / 200);
+    const newLevel = 1 + Math.floor(state.score / 220);
     if (newLevel !== state.level){
       state.level = newLevel;
       showMessage(`Level ${state.level}!`, 0.9);
@@ -410,7 +605,7 @@
     updateHUD();
   }
 
-  // Background (same vibe)
+  // ---------- Background (Mayo vibe) ----------
   function drawMayoBackground(dt){
     state.seaPhase += dt * 0.9;
     const horizonY = H() * 0.50;
@@ -595,13 +790,13 @@
     ctx.fill();
     ctx.stroke();
 
-    // clip long messages on mobile
     const clipped = (metrics.width + padX*2 > boxW) ? (text.slice(0, 42) + "…") : text;
     ctx.fillStyle = "rgba(235,245,255,0.95)";
     ctx.fillText(clipped, x, y);
     ctx.restore();
   }
 
+  // ---------- Main loop ----------
   let last = performance.now();
 
   function tick(now){
@@ -622,24 +817,20 @@
       state.time += dt;
 
       // Adaptive spawning:
-      // - cap invaders
-      // - if close to cap, slow spawns further
       const busyFactor = state.invaders.length / MAX_INVADERS; // 0..1
-      const extraDelay = (busyFactor > 0.65) ? (busyFactor - 0.65) * 2.2 : 0; // up to ~0.77s extra
+      const extraDelay = (busyFactor > 0.65) ? (busyFactor - 0.65) * 2.2 : 0;
 
       if (state.time >= state.nextSpawn && state.invaders.length < MAX_INVADERS){
         spawnInvader();
         const interval = baseSpawnInterval(state.level) + extraDelay;
         state.nextSpawn = state.time + interval * (0.85 + Math.random()*0.35);
       } else if (state.invaders.length >= MAX_INVADERS) {
-        // push next spawn forward while at cap
         state.nextSpawn = Math.max(state.nextSpawn, state.time + 0.35);
       }
 
       for (const inv of state.invaders) inv.y += inv.vy * dt;
       for (const s of state.shots) s.y += s.vy * dt;
 
-      // Collisions
       for (const inv of state.invaders){
         if (inv.hit) continue;
         for (const s of state.shots){
@@ -653,7 +844,6 @@
         }
       }
 
-      // Missed bubbles
       for (const inv of state.invaders){
         if (inv.hit) continue;
         if (inv.y >= H() - 30){
@@ -670,12 +860,10 @@
         }
       }
 
-      // Cleanup
       state.invaders = state.invaders.filter(inv => inv.y < H() + 70 && !inv.hit);
       state.shots = state.shots.filter(s => s.y > -70 && s.y < H() + 70);
     }
 
-    // Draw
     ctx.clearRect(0,0,W(),H());
     drawMayoBackground(dt);
     drawGround();
@@ -714,7 +902,10 @@
     requestAnimationFrame(tick);
   }
 
+  // Init
   updateHUD();
+  setCategory("all");          // sets activeBank + bankCount + clears screen
+  categorySelect.value = "all";
   resetGame();
   requestAnimationFrame(tick);
 })();
