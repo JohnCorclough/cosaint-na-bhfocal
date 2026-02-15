@@ -13,15 +13,16 @@
       display:grid;
       place-items:center;
       min-height:100vh;
-      padding:14px;
+      padding:12px;
     }
     .wrap{ width:min(980px,100%); }
+
     .hud{
-      display:flex; gap:10px; flex-wrap:wrap;
+      display:flex; gap:8px; flex-wrap:wrap;
       align-items:center; justify-content:space-between;
-      margin-bottom:10px; color:#d7e2ff; font-size:14px;
+      margin-bottom:10px; color:#d7e2ff; font-size:13px;
     }
-    .hud .left{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .hud .left{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
     .pill{
       background:rgba(255,255,255,0.08);
       border:1px solid rgba(255,255,255,0.12);
@@ -29,6 +30,7 @@
       border-radius:999px;
       white-space:nowrap;
     }
+
     canvas{
       width:100%;
       height:auto;
@@ -36,19 +38,8 @@
       border:1px solid rgba(255,255,255,0.14);
       border-radius:14px;
       box-shadow:0 10px 40px rgba(0,0,0,0.55);
-      touch-action: none;
+      touch-action:none;
     }
-    .panel{
-      margin-top:10px;
-      color:#c9d6ff;
-      font-size:13px;
-      line-height:1.35;
-      background:rgba(255,255,255,0.06);
-      border:1px solid rgba(255,255,255,0.10);
-      border-radius:12px;
-      padding:10px 12px;
-    }
-    .small{ opacity:0.92; }
 
     .controls{
       margin-top:10px;
@@ -73,16 +64,35 @@
     .btn.m { background: rgba(130,190,255,0.18); }
     .btn.f { background: rgba(255,150,220,0.16); }
     .btn.small { font-size:14px; font-weight:600; padding:12px 10px; opacity:1; }
+
     .btnRow{
       display:grid;
       grid-template-columns: 1fr 1fr 1fr;
       gap:10px;
       margin-top:10px;
     }
+
     .note{ margin-top:8px; opacity:0.9; font-size:12px; }
+
+    .panel{
+      margin-top:10px;
+      color:#c9d6ff;
+      font-size:13px;
+      line-height:1.35;
+      background:rgba(255,255,255,0.06);
+      border:1px solid rgba(255,255,255,0.10);
+      border-radius:12px;
+      padding:10px 12px;
+    }
+
     @media (min-width: 860px){
       .controls{ grid-template-columns: 1fr 1fr 1fr 1fr; }
       .btnRow{ grid-template-columns: 1fr 1fr 1fr; }
+    }
+    @media (max-width: 520px){
+      .hud{ font-size:12px; }
+      .pill{ padding:5px 9px; }
+      .btn{ font-size:15px; padding:12px 10px; }
     }
   </style>
 </head>
@@ -90,19 +100,18 @@
   <div class="wrap">
     <div class="hud">
       <div class="left">
-        <div class="pill" style="font-size:16px; font-weight:700;">Cosaint na bhFocal</div>
+        <div class="pill" style="font-size:15px;font-weight:750;">Cosaint na bhFocal</div>
         <div class="pill">Score: <b id="score">0</b></div>
         <div class="pill">Streak: <b id="streak">0</b></div>
         <div class="pill">Lives: <b id="lives">3</b></div>
         <div class="pill">Level: <b id="level">1</b></div>
         <div class="pill">Mode: <b id="mode">Practice</b></div>
       </div>
-      <div class="pill">
-        Keys: <b>Z</b> masculine · <b>X</b> feminine · P pause · R restart · H hints
-      </div>
+      <div class="pill">Keys: <b>Z</b> masc · <b>X</b> fem · P pause · R restart · H hints</div>
     </div>
 
-    <canvas id="game" width="960" height="520" aria-label="Cosaint na bhFocal game canvas"></canvas>
+    <!-- Taller playfield to reduce crowding -->
+    <canvas id="game" width="960" height="620" aria-label="Cosaint na bhFocal game canvas"></canvas>
 
     <div class="controls" aria-label="Touch controls">
       <div class="btn m" id="btnM">Masculine (Z)</div>
@@ -110,20 +119,17 @@
       <div class="btn small" id="btnP">Pause / Resume</div>
       <div class="btn small" id="btnH">Hints: On/Off</div>
     </div>
+
     <div class="btnRow">
       <div class="btn small" id="btnR">Restart</div>
       <div class="btn small" id="btnLeft">◀ Move</div>
       <div class="btn small" id="btnRight">Move ▶</div>
     </div>
-    <div class="note small">Tip: drag left/right on the game to move.</div>
+
+    <div class="note">Tip: drag left/right on the game area to move.</div>
 
     <div class="panel">
-      <div class="small">
-        Mayo-themed nouns fall. Shoot with masculine or feminine. Wrong shot or missed word = lose a life.
-      </div>
-      <div class="small" style="margin-top:6px;">
-        Hints are for reinforcement: feminine nouns often lenite an adjective after them (e.g. <i>sráid mhór</i>) while masculine often doesn’t (<i>teach mór</i>).
-      </div>
+      Mayo-themed nouns fall. Shoot with masculine or feminine. Wrong shot or missed word = lose a life.
     </div>
   </div>
 
@@ -131,79 +137,52 @@
 (() => {
   "use strict";
 
-  // ============================================================
-  // BIGGER word bank (Co. Mayo vibe: coast + countryside + community)
-  // NOTE: genders can vary by dialect/usage; tailor as you like.
-  // ============================================================
+  // Big-ish word bank (expand freely — doesn’t affect crowding now)
   const NOUNS = [
-    // --- Coastal / sea ---
+    // Coast / sea
     { w:"bád", g:"m" }, { w:"iasc", g:"m" }, { w:"cladach", g:"m" }, { w:"calafort", g:"m" },
     { w:"tonn", g:"f" }, { w:"taoide", g:"f" }, { w:"farraige", g:"f" }, { w:"trá", g:"f" },
     { w:"gaoth", g:"f" }, { w:"báisteach", g:"f" }, { w:"stoirm", g:"f" }, { w:"ceo", g:"m" },
-    { w:"grian", g:"f" }, { w:"gealach", g:"f" }, { w:"réalta", g:"f" }, { w:"spéir", g:"f" },
     { w:"carraig", g:"f" }, { w:"cloch", g:"f" }, { w:"gainimh", g:"f" }, { w:"salann", g:"m" },
-    { w:"bá", g:"f" }, { w:"cuan", g:"m" }, { w:"oileán", g:"m" }, { w:"linn", g:"f" },
-    { w:"port", g:"m" }, { w:"seoltóireacht", g:"f" }, { w:"líon", g:"m" }, { w:"crúca", g:"m" },
-    { w:"iascaire", g:"m" }, { w:"bádóir", g:"m" }, { w:"lampa", g:"m" }, { w:"tinteán", g:"m" },
-    { w:"cé", g:"f" }, { w:"linnteán", g:"m" }, { w:"maor", g:"m" },
+    { w:"bá", g:"f" }, { w:"cuan", g:"m" }, { w:"oileán", g:"m" }, { w:"port", g:"m" },
 
-    // --- Countryside / farming ---
-    { w:"cnoc", g:"m" }, { w:"sliabh", g:"m" }, { w:"gleann", g:"m" }, { w:"machaire", g:"m" },
-    { w:"páirc", g:"f" }, { w:"móin", g:"f" }, { w:"portach", g:"m" }, { w:"talamh", g:"m" },
-    { w:"féar", g:"m" }, { w:"fómhar", g:"m" }, { w:"earrach", g:"m" }, { w:"geimhreadh", g:"m" },
-    { w:"samhradh", g:"m" }, { w:"abhainn", g:"f" }, { w:"sruth", g:"m" }, { w:"tobar", g:"m" },
-    { w:"loch", g:"m" }, { w:"droichead", g:"m" }, { w:"bóthar", g:"m" }, { w:"slí", g:"f" },
-    { w:"crann", g:"m" }, { w:"coill", g:"f" }, { w:"duilleog", g:"f" }, { w:"bláth", g:"m" },
-    { w:"fréamh", g:"f" }, { w:"síol", g:"m" }, { w:"éan", g:"m" }, { w:"madra", g:"m" },
-    { w:"cat", g:"m" }, { w:"bó", g:"f" }, { w:"lao", g:"m" }, { w:"caora", g:"f" },
-    { w:"uan", g:"m" }, { w:"capall", g:"m" }, { w:"asal", g:"m" }, { w:"muc", g:"f" },
-    { w:"capaillín", g:"m" }, { w:"feirm", g:"f" }, { w:"tréad", g:"m" }, { w:"aithe", g:"f" },
+    // Countryside
+    { w:"cnoc", g:"m" }, { w:"sliabh", g:"m" }, { w:"gleann", g:"m" }, { w:"páirc", g:"f" },
+    { w:"móin", g:"f" }, { w:"portach", g:"m" }, { w:"talamh", g:"m" }, { w:"féar", g:"m" },
+    { w:"abhainn", g:"f" }, { w:"loch", g:"m" }, { w:"tobar", g:"m" }, { w:"droichead", g:"m" },
+    { w:"bóthar", g:"m" }, { w:"slí", g:"f" }, { w:"crann", g:"m" }, { w:"coill", g:"f" },
+    { w:"bláth", g:"m" }, { w:"éan", g:"m" }, { w:"madra", g:"m" }, { w:"cat", g:"m" },
+    { w:"bó", g:"f" }, { w:"lao", g:"m" }, { w:"caora", g:"f" }, { w:"uan", g:"m" },
+    { w:"capall", g:"m" }, { w:"asal", g:"m" }, { w:"muc", g:"f" }, { w:"feirm", g:"f" },
 
-    // --- Home / community ---
+    // Home / community
     { w:"teach", g:"m" }, { w:"doras", g:"m" }, { w:"fuinneog", g:"f" }, { w:"seomra", g:"m" },
     { w:"cistin", g:"f" }, { w:"leaba", g:"f" }, { w:"bord", g:"m" }, { w:"cathaoir", g:"f" },
-    { w:"lampa", g:"m" }, { w:"eochair", g:"f" }, { w:"balla", g:"m" }, { w:"urlár", g:"m" },
-    { w:"díon", g:"m" }, { w:"gairdín", g:"m" }, { w:"geata", g:"m" }, { w:"páipéar", g:"m" },
-    { w:"peann", g:"m" }, { w:"leabhar", g:"m" }, { w:"bosca", g:"m" }, { w:"mála", g:"m" },
-    { w:"cupán", g:"m" }, { w:"pláta", g:"m" }, { w:"scian", g:"f" }, { w:"forc", g:"f" },
-    { w:"spúnóg", g:"f" }, { w:"arán", g:"m" }, { w:"im", g:"m" }, { w:"bainne", g:"m" },
-    { w:"tae", g:"m" }, { w:"caife", g:"m" }, { w:"uisce", g:"m" },
-
-    // --- Town / services / people ---
+    { w:"eochair", g:"f" }, { w:"balla", g:"m" }, { w:"urlár", g:"m" }, { w:"díon", g:"m" },
     { w:"baile", g:"m" }, { w:"sráid", g:"f" }, { w:"siopa", g:"m" }, { w:"scoil", g:"f" },
-    { w:"séipéal", g:"m" }, { w:"oifig", g:"f" }, { w:"óstán", g:"m" }, { w:"pub", g:"m" },
-    { w:"margadh", g:"m" }, { w:"stáisiún", g:"m" }, { w:"bus", g:"m" }, { w:"carr", g:"m" },
-    { w:"rothar", g:"m" }, { w:"dochtúir", g:"m" }, { w:"banaltra", g:"f" }, { w:"múinteoir", g:"m" },
-    { w:"dalta", g:"m" }, { w:"páiste", g:"m" }, { w:"bean", g:"f" }, { w:"fear", g:"m" },
-    { w:"cara", g:"m" }, { w:"teaghlach", g:"m" }, { w:"comharsa", g:"m" }, { w:"lucht", g:"m" },
-
-    // --- Sport / culture ---
-    { w:"cluiche", g:"m" }, { w:"liathróid", g:"f" }, { w:"foireann", g:"f" }, { w:"iománaíocht", g:"f" },
-    { w:"peil", g:"f" }, { w:"ceol", g:"m" }, { w:"amhrán", g:"m" }, { w:"damhsa", g:"m" },
-    { w:"scéal", g:"m" }, { w:"nuacht", g:"f" }, { w:"comhrá", g:"m" }, { w:"focal", g:"m" },
-    { w:"abairt", g:"f" }, { w:"ceist", g:"f" }, { w:"freagra", g:"m" }, { w:"obair", g:"f" },
-    { w:"aimsir", g:"f" }, { w:"oíche", g:"f" }, { w:"lá", g:"m" }, { w:"seachtain", g:"f" },
-    { w:"bliain", g:"f" }, { w:"am", g:"m" },
+    { w:"séipéal", g:"m" }, { w:"cluiche", g:"m" }, { w:"ceol", g:"m" }, { w:"obair", g:"f" },
+    { w:"ceist", g:"f" }, { w:"freagra", g:"m" }, { w:"páiste", g:"m" }, { w:"bean", g:"f" }, { w:"fear", g:"m" },
+    { w:"aimsir", g:"f" }, { w:"oíche", g:"f" }, { w:"lá", g:"m" }, { w:"seachtain", g:"f" }, { w:"bliain", g:"f" }, { w:"am", g:"m" },
   ];
 
-  // ---------- Canvas ----------
   const canvas = document.getElementById("game");
-  const ctx = canvas.getContext("2d", { alpha: false });
+  const ctx = canvas.getContext("2d", { alpha:false });
+
+  const isMobile = matchMedia("(max-width: 560px)").matches;
 
   function fitCanvas(){
     const cssW = canvas.clientWidth;
     const ratio = window.devicePixelRatio || 1;
     canvas.width  = Math.round(cssW * ratio);
-    canvas.height = Math.round((cssW * (520/960)) * ratio);
+    canvas.height = Math.round((cssW * (620/960)) * ratio);
     ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
   }
   function W(){ return canvas.clientWidth; }
   function H(){ return canvas.clientHeight; }
 
-  requestAnimationFrame(() => fitCanvas());
-  window.addEventListener("resize", () => fitCanvas());
+  requestAnimationFrame(fitCanvas);
+  addEventListener("resize", fitCanvas);
 
-  // ---------- HUD ----------
   const scoreEl  = document.getElementById("score");
   const streakEl = document.getElementById("streak");
   const livesEl  = document.getElementById("lives");
@@ -211,70 +190,79 @@
   const modeEl   = document.getElementById("mode");
 
   const state = {
-    over: false,
-    paused: false,
-    score: 0,
-    streak: 0,
-    lives: 3,
-    level: 1,
-    time: 0,
-    nextSpawn: 0,
-    invaders: [],
-    shots: [],
-    message: { text: "", until: 0 },
-    showHints: true,
-    seaPhase: 0
+    over:false, paused:false,
+    score:0, streak:0, lives:3, level:1,
+    time:0, nextSpawn:0,
+    invaders:[], shots:[],
+    message:{ text:"", until:0 },
+    showHints:true,
+    seaPhase:0
   };
 
-  const player = { x: 0, y: 0, w: 104, h: 18 };
+  const player = { x:0, y:0, w:104, h:18 };
 
   function updateHUD(){
-    scoreEl.textContent  = String(state.score);
+    scoreEl.textContent = String(state.score);
     streakEl.textContent = String(state.streak);
-    livesEl.textContent  = String(state.lives);
-    levelEl.textContent  = String(state.level);
-    modeEl.textContent   = state.showHints ? "Practice" : "Test";
+    livesEl.textContent = String(state.lives);
+    levelEl.textContent = String(state.level);
+    modeEl.textContent = state.showHints ? "Practice" : "Test";
   }
+
   function positionPlayer(){
     player.x = W()/2 - player.w/2;
-    player.y = H() - 46;
+    player.y = H() - 54;
   }
 
-  // ===== Speed tuning =====
-  const FALL_SPEED_MULTIPLIER = 0.33; // ~1/3 speed
+  // ===== Crowd-control knobs =====
+  // Keep screen readable.
+  const MAX_INVADERS = isMobile ? 6 : 10;
 
-  function spawnInterval(level){
-    return Math.max(0.55, 1.35 - level*0.10);
-  }
+  // Slower fall speed (as requested earlier)
+  const FALL_SPEED_MULTIPLIER = 0.33;
+
+  // Bubble sizing (smaller on phones)
+  const INVADER_R = isMobile ? 13 : 16;
+  const BUBBLE_PAD = isMobile ? 8 : 10;
+  const WORD_FONT = isMobile ? 14 : 16;
+
+  // Neutral bubble styling (no gender giveaway)
+  const BUBBLE_FILL   = "rgba(235,245,255,0.10)";
+  const BUBBLE_STROKE = "rgba(235,245,255,0.26)";
+
   function invaderSpeed(level){
-    const base = 32 + level*6;
+    const base = 30 + level*5;
     return base * FALL_SPEED_MULTIPLIER;
   }
-  function shotSpeed(){ return 540; }
 
-  function randChoice(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
-  function showMessage(text, seconds=1.2){
+  // Key fix: reduce spawn rate to match slower fall + cap density
+  function baseSpawnInterval(level){
+    // bigger number = fewer spawns (less crowding)
+    // gentle difficulty curve
+    const v = 2.1 - level*0.10;
+    return Math.max(1.25, v);
+  }
+
+  function shotSpeed(){ return 560; }
+
+  function randChoice(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+  function showMessage(text, seconds=1.1){
     state.message.text = text;
     state.message.until = state.time + seconds;
   }
 
   function resetGame(){
-    state.over = false;
-    state.paused = false;
-    state.score = 0;
-    state.streak = 0;
-    state.lives = 3;
-    state.level = 1;
-    state.time = 0;
-    state.nextSpawn = 0.7;
-    state.invaders.length = 0;
-    state.shots.length = 0;
-    state.message = { text: "Z = masculine, X = feminine. Tap buttons on phone.", until: 2.8 };
+    state.over=false; state.paused=false;
+    state.score=0; state.streak=0; state.lives=3; state.level=1;
+    state.time=0; state.nextSpawn=0.9;
+    state.invaders.length=0; state.shots.length=0;
+    state.message = { text:"Z = masculine, X = feminine. Tap buttons on phone.", until:2.6 };
     updateHUD();
     positionPlayer();
   }
 
-  // Hint engine (simplified)
+  // Hints (kept simple)
   function lenite(word){
     if (!word) return word;
     const first = word[0].toLowerCase();
@@ -283,74 +271,95 @@
     if (lenitable.has(first)) return word[0] + "h" + word.slice(1);
     return word;
   }
-  function adjectiveAfterNoun(adj, nounGender){
-    return nounGender === "f" ? lenite(adj) : adj;
-  }
   const ADJECTIVES = ["mór","beag","fuar","fliuch","garbh","ciúin"];
   function examplePhrase(noun, gender){
     const adj = randChoice(ADJECTIVES);
-    return `${noun} ${adjectiveAfterNoun(adj, gender)}`;
+    const adj2 = (gender === "f") ? lenite(adj) : adj;
+    return `${noun} ${adj2}`;
+  }
+
+  // Smarter spawning: try to avoid overlaps at spawn time
+  function tryPickSpawnX(){
+    const padding = 16;
+    const minX = padding + (INVADER_R + BUBBLE_PAD);
+    const maxX = W() - padding - (INVADER_R + BUBBLE_PAD);
+    if (maxX <= minX) return W()/2;
+
+    const minDist = (INVADER_R + BUBBLE_PAD) * 2.2;
+
+    for (let attempt=0; attempt<10; attempt++){
+      const x = minX + Math.random()*(maxX - minX);
+      let ok = true;
+      for (const inv of state.invaders){
+        // only check near-top invaders (spawn collision zone)
+        if (inv.y > 120) continue;
+        const dx = inv.x - x;
+        const dy = inv.y - (-24);
+        if (dx*dx + dy*dy < minDist*minDist){
+          ok = false; break;
+        }
+      }
+      if (ok) return x;
+    }
+    return minX + Math.random()*(maxX - minX);
   }
 
   function spawnInvader(){
     const item = randChoice(NOUNS);
-    const padding = 14;
-    const x = padding + Math.random() * (W() - padding*2);
+    const x = tryPickSpawnX();
     state.invaders.push({
-      word: item.w,
-      g: item.g,
+      word:item.w,
+      g:item.g,
       x,
-      y: -24,
-      vy: invaderSpeed(state.level),
-      r: 16,
-      hit: false
+      y:-26,
+      vy:invaderSpeed(state.level),
+      r:INVADER_R,
+      hit:false
     });
   }
 
   function fireShot(gender){
     if (state.over || state.paused) return;
     state.shots.push({
-      g: gender,
-      x: player.x + player.w/2,
-      y: player.y,
-      vy: -shotSpeed(),
-      r: 6
+      g:gender,
+      x:player.x + player.w/2,
+      y:player.y,
+      vy:-shotSpeed(),
+      r:6
     });
   }
 
-  // Keyboard: Z/X now
-  window.addEventListener("keydown", (e) => {
+  // Keyboard: Z/X
+  addEventListener("keydown", (e) => {
     const k = e.key.toLowerCase();
     if (k === "p") state.paused = !state.paused;
     if (k === "r") resetGame();
     if (k === "h") { state.showHints = !state.showHints; updateHUD(); }
-    if (k === "z") fireShot("m"); // masculine
-    if (k === "x") fireShot("f"); // feminine
+    if (k === "z") fireShot("m");
+    if (k === "x") fireShot("f");
   });
 
-  // Touch buttons
-  function bindTap(el, fn){
-    el.addEventListener("pointerdown", (ev) => { ev.preventDefault(); fn(); });
+  // Touch
+  function bindTap(id, fn){
+    document.getElementById(id).addEventListener("pointerdown", (ev)=>{ ev.preventDefault(); fn(); });
   }
-  bindTap(document.getElementById("btnM"), () => fireShot("m"));
-  bindTap(document.getElementById("btnF"), () => fireShot("f"));
-  bindTap(document.getElementById("btnP"), () => { state.paused = !state.paused; });
-  bindTap(document.getElementById("btnR"), () => resetGame());
-  bindTap(document.getElementById("btnH"), () => { state.showHints = !state.showHints; updateHUD(); });
+  bindTap("btnM", ()=>fireShot("m"));
+  bindTap("btnF", ()=>fireShot("f"));
+  bindTap("btnP", ()=>{ state.paused = !state.paused; });
+  bindTap("btnR", ()=>resetGame());
+  bindTap("btnH", ()=>{ state.showHints = !state.showHints; updateHUD(); });
 
   // Hold-to-move
-  let moveLeftHeld = false, moveRightHeld = false;
-  const btnLeft = document.getElementById("btnLeft");
-  const btnRight = document.getElementById("btnRight");
-
-  function bindHold(el, setHeld){
+  let moveLeftHeld=false, moveRightHeld=false;
+  function bindHold(id, setHeld){
+    const el = document.getElementById(id);
     el.addEventListener("pointerdown", (e)=>{ e.preventDefault(); setHeld(true); });
-    el.addEventListener("pointerup",   (e)=>{ e.preventDefault(); setHeld(false); });
-    el.addEventListener("pointercancel",(e)=>{ e.preventDefault(); setHeld(false); });
-    el.addEventListener("pointerleave",(e)=>{ e.preventDefault(); setHeld(false); });
+    el.addEventListener("pointerup", (e)=>{ e.preventDefault(); setHeld(false); });
+    el.addEventListener("pointercancel", (e)=>{ e.preventDefault(); setHeld(false); });
+    el.addEventListener("pointerleave", (e)=>{ e.preventDefault(); setHeld(false); });
   }
-  bindHold(btnLeft,  (v)=> moveLeftHeld = v);
-  bindHold(btnRight, (v)=> moveRightHeld = v);
+  bindHold("btnLeft", v=>moveLeftHeld=v);
+  bindHold("btnRight", v=>moveRightHeld=v);
 
   // Drag-to-move
   function pointerMove(clientX){
@@ -361,11 +370,7 @@
   canvas.addEventListener("pointerdown", (e)=>{ e.preventDefault(); pointerMove(e.clientX); canvas.setPointerCapture(e.pointerId); });
   canvas.addEventListener("pointermove", (e)=>{ if (e.buttons) pointerMove(e.clientX); });
 
-  // Collision
-  function dist2(ax, ay, bx, by){
-    const dx = ax - bx, dy = ay - by;
-    return dx*dx + dy*dy;
-  }
+  function dist2(ax,ay,bx,by){ const dx=ax-bx, dy=ay-by; return dx*dx + dy*dy; }
 
   function handleHit(inv, shot){
     inv.hit = true;
@@ -373,33 +378,29 @@
 
     if (correct){
       state.streak += 1;
-      const base = 10;
-      const bonus = Math.min(30, state.streak);
-      state.score += base + bonus;
-
+      state.score += 10 + Math.min(30, state.streak);
       const gTxt = inv.g === "m" ? "masc" : "fem";
-      showMessage(
-        state.showHints ? `✓ ${inv.word} (${gTxt}) — e.g. “${examplePhrase(inv.word, inv.g)}”`
-                        : `✓ ${inv.word} (${gTxt})`,
-        state.showHints ? 1.35 : 1.0
+      showMessage(state.showHints
+        ? `✓ ${inv.word} (${gTxt}) — e.g. “${examplePhrase(inv.word, inv.g)}”`
+        : `✓ ${inv.word} (${gTxt})`,
+        state.showHints ? 1.25 : 0.95
       );
     } else {
       state.streak = 0;
       state.score = Math.max(0, state.score - 12);
       state.lives -= 1;
-
       const gTxt = inv.g === "m" ? "masc" : "fem";
-      showMessage(
-        state.showHints ? `✗ ${inv.word} is ${gTxt} — e.g. “${examplePhrase(inv.word, inv.g)}”`
-                        : `✗ ${inv.word} is ${gTxt}`,
-        state.showHints ? 1.55 : 1.25
+      showMessage(state.showHints
+        ? `✗ ${inv.word} is ${gTxt} — e.g. “${examplePhrase(inv.word, inv.g)}”`
+        : `✗ ${inv.word} is ${gTxt}`,
+        state.showHints ? 1.35 : 1.1
       );
     }
 
-    const newLevel = 1 + Math.floor(state.score / 160);
+    const newLevel = 1 + Math.floor(state.score / 200);
     if (newLevel !== state.level){
       state.level = newLevel;
-      showMessage(`Level ${state.level}!`, 1.0);
+      showMessage(`Level ${state.level}!`, 0.9);
     }
 
     if (state.lives <= 0){
@@ -409,10 +410,10 @@
     updateHUD();
   }
 
-  // Background (Mayo vibe)
+  // Background (same vibe)
   function drawMayoBackground(dt){
     state.seaPhase += dt * 0.9;
-    const horizonY = H() * 0.52;
+    const horizonY = H() * 0.50;
 
     ctx.save();
 
@@ -434,8 +435,8 @@
     ctx.globalAlpha = 0.22;
     ctx.lineWidth = 1;
     ctx.strokeStyle = "rgba(170,210,255,1)";
-    for (let i=0; i<10; i++){
-      const y = horizonY + 18 + i*26;
+    for (let i=0; i<9; i++){
+      const y = horizonY + 18 + i*28;
       ctx.beginPath();
       const amp = 6 + i*0.6;
       for (let x=0; x<=W(); x+=18){
@@ -449,14 +450,14 @@
 
     ctx.fillStyle = "rgba(8,12,16,0.92)";
     ctx.beginPath();
-    ctx.moveTo(0, horizonY + 40);
-    ctx.lineTo(W()*0.18, horizonY + 22);
-    ctx.lineTo(W()*0.28, horizonY + 34);
-    ctx.lineTo(W()*0.40, horizonY + 18);
-    ctx.lineTo(W()*0.52, horizonY + 38);
-    ctx.lineTo(W()*0.64, horizonY + 26);
-    ctx.lineTo(W()*0.78, horizonY + 46);
-    ctx.lineTo(W(), horizonY + 30);
+    ctx.moveTo(0, horizonY + 44);
+    ctx.lineTo(W()*0.20, horizonY + 26);
+    ctx.lineTo(W()*0.32, horizonY + 38);
+    ctx.lineTo(W()*0.44, horizonY + 22);
+    ctx.lineTo(W()*0.56, horizonY + 42);
+    ctx.lineTo(W()*0.70, horizonY + 28);
+    ctx.lineTo(W()*0.84, horizonY + 50);
+    ctx.lineTo(W(), horizonY + 34);
     ctx.lineTo(W(), H());
     ctx.lineTo(0, H());
     ctx.closePath();
@@ -465,14 +466,14 @@
     ctx.fillStyle = "rgba(14,22,20,0.55)";
     ctx.beginPath();
     ctx.moveTo(0, horizonY);
-    ctx.quadraticCurveTo(W()*0.18, horizonY-60, W()*0.36, horizonY-10);
-    ctx.quadraticCurveTo(W()*0.54, horizonY+20, W()*0.70, horizonY-25);
-    ctx.quadraticCurveTo(W()*0.86, horizonY-70, W(), horizonY-10);
+    ctx.quadraticCurveTo(W()*0.20, horizonY-62, W()*0.38, horizonY-10);
+    ctx.quadraticCurveTo(W()*0.56, horizonY+18, W()*0.72, horizonY-26);
+    ctx.quadraticCurveTo(W()*0.88, horizonY-74, W(), horizonY-12);
     ctx.lineTo(W(), horizonY);
     ctx.closePath();
     ctx.fill();
 
-    const lx = W()*0.86, ly = horizonY + 26;
+    const lx = W()*0.86, ly = horizonY + 28;
     ctx.fillStyle = "rgba(10,10,12,0.95)";
     ctx.beginPath();
     ctx.moveTo(lx-10, ly);
@@ -490,7 +491,6 @@
     ctx.restore();
   }
 
-  // Drawing helpers
   function roundRect(c, x, y, w, h, r){
     c.beginPath();
     c.moveTo(x+r, y);
@@ -506,8 +506,8 @@
     ctx.strokeStyle = "rgba(255,255,255,0.20)";
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(0, H()-20);
-    ctx.lineTo(W(), H()-20);
+    ctx.moveTo(0, H()-22);
+    ctx.lineTo(W(), H()-22);
     ctx.stroke();
     ctx.restore();
   }
@@ -525,6 +525,7 @@
 
     ctx.fillStyle = "rgba(130,190,255,0.40)";
     ctx.fillRect(pad, -cannonH, cannonW, cannonH);
+
     ctx.fillStyle = "rgba(255,150,220,0.34)";
     ctx.fillRect(pad*2 + cannonW, -cannonH, cannonW, cannonH);
 
@@ -539,23 +540,19 @@
     ctx.restore();
   }
 
-  // Neutral bubbles (no gender giveaway)
-  const BUBBLE_FILL   = "rgba(235,245,255,0.10)";
-  const BUBBLE_STROKE = "rgba(235,245,255,0.28)";
-
   function drawInvader(inv){
     ctx.save();
     ctx.translate(inv.x, inv.y);
 
     ctx.beginPath();
-    ctx.arc(0, 0, inv.r + 10, 0, Math.PI*2);
+    ctx.arc(0, 0, inv.r + BUBBLE_PAD, 0, Math.PI*2);
     ctx.fillStyle = BUBBLE_FILL;
     ctx.fill();
     ctx.lineWidth = 1;
     ctx.strokeStyle = BUBBLE_STROKE;
     ctx.stroke();
 
-    ctx.font = "16px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
+    ctx.font = `${WORD_FONT}px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillStyle = "rgba(245,248,255,0.95)";
@@ -569,17 +566,18 @@
     ctx.translate(s.x, s.y);
     ctx.beginPath();
     ctx.arc(0, 0, s.r, 0, Math.PI*2);
-    ctx.fillStyle = s.g === "m" ? "rgba(130,190,255,0.95)" : "rgba(255,150,220,0.95)";
+    ctx.fillStyle = (s.g === "m") ? "rgba(130,190,255,0.95)" : "rgba(255,150,220,0.95)";
     ctx.fill();
     ctx.restore();
   }
 
   function drawMessage(){
     if (!state.message.text || state.time > state.message.until) return;
-    const text = state.message.text;
 
+    const text = state.message.text;
     ctx.save();
-    ctx.font = "16px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
+    ctx.font = isMobile ? "14px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif"
+                        : "16px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
 
@@ -588,21 +586,22 @@
 
     const metrics = ctx.measureText(text);
     const padX = 14, padY = 9;
-    const boxW = metrics.width + padX*2;
+    const boxW = Math.min(W() - 18, metrics.width + padX*2);
     const boxH = 24 + padY*2;
 
-    ctx.fillStyle = "rgba(0,0,0,0.45)";
+    ctx.fillStyle = "rgba(0,0,0,0.40)";
     ctx.strokeStyle = "rgba(255,255,255,0.18)";
     roundRect(ctx, x - boxW/2, y - boxH/2, boxW, boxH, 10);
     ctx.fill();
     ctx.stroke();
 
+    // clip long messages on mobile
+    const clipped = (metrics.width + padX*2 > boxW) ? (text.slice(0, 42) + "…") : text;
     ctx.fillStyle = "rgba(235,245,255,0.95)";
-    ctx.fillText(text, x, y);
+    ctx.fillText(clipped, x, y);
     ctx.restore();
   }
 
-  // Main loop
   let last = performance.now();
 
   function tick(now){
@@ -610,7 +609,7 @@
     last = now;
 
     if (player.y === 0) positionPlayer();
-    else player.y = H() - 46;
+    else player.y = H() - 54;
 
     const moveSpeed = 340;
     if (!state.over && !state.paused){
@@ -622,19 +621,30 @@
     if (!state.over && !state.paused){
       state.time += dt;
 
-      if (state.time >= state.nextSpawn){
+      // Adaptive spawning:
+      // - cap invaders
+      // - if close to cap, slow spawns further
+      const busyFactor = state.invaders.length / MAX_INVADERS; // 0..1
+      const extraDelay = (busyFactor > 0.65) ? (busyFactor - 0.65) * 2.2 : 0; // up to ~0.77s extra
+
+      if (state.time >= state.nextSpawn && state.invaders.length < MAX_INVADERS){
         spawnInvader();
-        state.nextSpawn = state.time + spawnInterval(state.level) * (0.85 + Math.random()*0.35);
+        const interval = baseSpawnInterval(state.level) + extraDelay;
+        state.nextSpawn = state.time + interval * (0.85 + Math.random()*0.35);
+      } else if (state.invaders.length >= MAX_INVADERS) {
+        // push next spawn forward while at cap
+        state.nextSpawn = Math.max(state.nextSpawn, state.time + 0.35);
       }
 
       for (const inv of state.invaders) inv.y += inv.vy * dt;
       for (const s of state.shots) s.y += s.vy * dt;
 
+      // Collisions
       for (const inv of state.invaders){
         if (inv.hit) continue;
         for (const s of state.shots){
           if (s.y < -30) continue;
-          const rr = (inv.r + 10 + s.r);
+          const rr = (inv.r + BUBBLE_PAD + s.r);
           if (dist2(inv.x, inv.y, s.x, s.y) <= rr*rr){
             s.y = -9999;
             handleHit(inv, s);
@@ -643,13 +653,14 @@
         }
       }
 
+      // Missed bubbles
       for (const inv of state.invaders){
         if (inv.hit) continue;
-        if (inv.y >= H() - 24){
+        if (inv.y >= H() - 30){
           inv.hit = true;
           state.streak = 0;
           state.lives -= 1;
-          showMessage(`Missed: ${inv.word}`, 1.0);
+          showMessage(`Missed: ${inv.word}`, 0.95);
 
           if (state.lives <= 0){
             state.over = true;
@@ -659,11 +670,13 @@
         }
       }
 
-      state.invaders = state.invaders.filter(inv => inv.y < H() + 60 && !inv.hit);
-      state.shots = state.shots.filter(s => s.y > -60 && s.y < H() + 60);
+      // Cleanup
+      state.invaders = state.invaders.filter(inv => inv.y < H() + 70 && !inv.hit);
+      state.shots = state.shots.filter(s => s.y > -70 && s.y < H() + 70);
     }
 
-    ctx.clearRect(0, 0, W(), H());
+    // Draw
+    ctx.clearRect(0,0,W(),H());
     drawMayoBackground(dt);
     drawGround();
 
@@ -673,8 +686,8 @@
 
     if (state.paused && !state.over){
       ctx.save();
-      ctx.fillStyle = "rgba(0,0,0,0.35)";
-      ctx.fillRect(0, 0, W(), H());
+      ctx.fillStyle = "rgba(0,0,0,0.32)";
+      ctx.fillRect(0,0,W(),H());
       ctx.font = "22px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
       ctx.fillStyle = "rgba(245,248,255,0.95)";
       ctx.textAlign = "center";
@@ -685,8 +698,8 @@
 
     if (state.over){
       ctx.save();
-      ctx.fillStyle = "rgba(0,0,0,0.45)";
-      ctx.fillRect(0, 0, W(), H());
+      ctx.fillStyle = "rgba(0,0,0,0.42)";
+      ctx.fillRect(0,0,W(),H());
       ctx.font = "28px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
       ctx.fillStyle = "rgba(245,248,255,0.95)";
       ctx.textAlign = "center";
@@ -701,6 +714,7 @@
     requestAnimationFrame(tick);
   }
 
+  updateHUD();
   resetGame();
   requestAnimationFrame(tick);
 })();
